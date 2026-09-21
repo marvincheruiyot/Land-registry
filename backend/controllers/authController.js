@@ -1,0 +1,426 @@
+const User = require('../models/User');
+const AuditLog = require('../models/AuditLog');
+const { generateToken, generateRefreshToken, verifyRefreshToken, generateRandomToken, hashToken } = require('../utils/tokenGenerator');
+const emailService = require('../utils/emailService');
+const { logger } = require('../utils/logger');
+
+// @desc    Register a new user
+// @route   POST /api/v1/auth/register
+// @access  Public
+exports.register = async (req, res, next) => {
+  try {
+    const { fullName, email, phoneNumber, nationalId, password, role, physicalAddress } = req.body;
+
+    // Check if user already exists
+    const existingUser = await User.findOne({
+      $or: [{ email }, { nationalId }]
+    });
+
+    if (existingUser) {
+      return res.status(400).json({
+        status: 'error',
+        message: existingUser.email === email 
+          ? 'Email already registered' 
+          : 'National ID already registered'
+      });
+    }
+
+    // Create user
+    const user = await User.create({
+      fullName,
+      email,
+      phoneNumber,
+      nationalId,
+      password,
+      role: role || 'Land_Owner',
+      physicalAddress
+    });
+
+    // Generate email verification token
+    const verificationToken = generateRandomToken();
+    user.emailVerificationToken = hashToken(verificationToken);
+    await user.save();
+
+    // Send verification email
+    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${verificationToken}`;
+    await emailService.sendVerificationEmail(user.email, user.fullName, verificationUrl);
+
+    // Generate tokens
+    const accessToken = generateToken(user._id);
+    const refreshToken = generateRefreshToken(user._id);
+
+    // Log registration
+    await AuditLog.log({
+      user: user._id,
+      action: 'USER_CREATED',
+      entityType: 'User',
+      entityId: user._id,
+      description: `User registered: ${user.email}`,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent')
+    });
+
+    res.status(201).json({
+      status: 'success',
+      message: 'Registration successful. Please check your email to verify your account.',
+      data: {
+        user: {
+          id: user._id,
+          fullName: user.fullName,
+          email: user.email,
+          phoneNumber: user.phoneNumber,
+          role: user.role
+        },
+        accessToken,
+        refreshToken
+      }
+    });
+  } catch (error) {
+    logger.error(`Registration error: ${error.message}`);
+    next(error);
+  }
+};
+
+// @desc    Login user
+// @route   POST /api/v1/auth/login
+// @access  Public
+exports.login = async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+
+    // Find user and include password field
+    const user = await User.findOne({ email }).select('+password');
+
+    if (!user) {
+      // Log failed login attempt
+      await AuditLog.log({
+        user: null,
+        action: 'LOGIN_FAILED',
+        description: `Failed login attempt for email: ${email}`,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+        severity: 'warning'
+      });
+
+      return res.status(401).json({
+        status: 'error',
+        message: 'Invalid credentials'
+      });
+    }
+
+    // Check if account is locked
+    if (user.isAccountLocked()) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Account is temporarily locked due to multiple failed login attempts. Please try again later.'
+      });
+    }
+
+    // Check password
+    const isPasswordCorrect = await user.comparePassword(password);
+
+    if (!isPasswordCorrect) {
+      // Increment failed login attempts
+      await user.incrementLoginAttempts();
+
+      // Log failed login
+      await AuditLog.log({
+        user: user._id,
+        action: 'LOGIN_FAILED',
+        description: 'Failed login attempt - incorrect password',
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+        severity: 'warning'
+      });
+
+      return res.status(401).json({
+        status: 'error',
+        message: 'Invalid credentials'
+      });
+    }
+
+    // Check if account is active
+    if (!user.isActive) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Your account has been deactivated. Please contact administrator.'
+      });
+    }
+
+    // Reset failed login attempts
+    await user.resetLoginAttempts();
+
+    // Update last login
+    user.lastLogin = new Date();
+    await user.save();
+
+    // Generate tokens
+    const accessToken = generateToken(user._id);
+    const refreshToken = generateRefreshToken(user._id);
+
+    // Log successful login
+    await AuditLog.log({
+      user: user._id,
+      action: 'LOGIN',
+      description: 'User logged in successfully',
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent')
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Login successful',
+      data: {
+        user: {
+          id: user._id,
+          fullName: user.fullName,
+          email: user.email,
+          phoneNumber: user.phoneNumber,
+          role: user.role,
+          isEmailVerified: user.isEmailVerified
+        },
+        accessToken,
+        refreshToken
+      }
+    });
+  } catch (error) {
+    logger.error(`Login error: ${error.message}`);
+    next(error);
+  }
+};
+
+// @desc    Logout user
+// @route   POST /api/v1/auth/logout
+// @access  Private
+exports.logout = async (req, res, next) => {
+  try {
+    // Log logout
+    await AuditLog.log({
+      user: req.user._id,
+      action: 'LOGOUT',
+      description: 'User logged out',
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent')
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Logout successful'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Refresh access token
+// @route   POST /api/v1/auth/refresh-token
+// @access  Public
+exports.refreshToken = async (req, res, next) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Refresh token is required'
+      });
+    }
+
+    const decoded = verifyRefreshToken(refreshToken);
+
+    if (!decoded) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Invalid or expired refresh token'
+      });
+    }
+
+    const user = await User.findById(decoded.id);
+
+    if (!user || !user.isActive) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'User not found or inactive'
+      });
+    }
+
+    const newAccessToken = generateToken(user._id);
+    const newRefreshToken = generateRefreshToken(user._id);
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Forgot password
+// @route   POST /api/v1/auth/forgot-password
+// @access  Public
+exports.forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'No user found with that email'
+      });
+    }
+
+    // Generate reset token
+    const resetToken = generateRandomToken();
+    user.passwordResetToken = hashToken(resetToken);
+    user.passwordResetExpires = Date.now() + 60 * 60 * 1000; // 1 hour
+    await user.save();
+
+    // Send reset email
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
+    await emailService.sendPasswordResetEmail(user.email, user.fullName, resetUrl);
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Password reset link sent to your email'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Reset password
+// @route   POST /api/v1/auth/reset-password/:token
+// @access  Public
+exports.resetPassword = async (req, res, next) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    const hashedToken = hashToken(token);
+
+    const user = await User.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid or expired reset token'
+      });
+    }
+
+    // Set new password
+    user.password = password;
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save();
+
+    // Log password reset
+    await AuditLog.log({
+      user: user._id,
+      action: 'PASSWORD_RESET',
+      description: 'Password reset successfully',
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent')
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Password reset successful'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Change password
+// @route   POST /api/v1/auth/change-password
+// @access  Private
+exports.changePassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    const user = await User.findById(req.user._id).select('+password');
+
+    const isMatch = await user.comparePassword(currentPassword);
+
+    if (!isMatch) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Current password is incorrect'
+      });
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    // Log password change
+    await AuditLog.log({
+      user: user._id,
+      action: 'PASSWORD_CHANGED',
+      description: 'Password changed successfully',
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent')
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Password changed successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Verify email
+// @route   GET /api/v1/auth/verify-email/:token
+// @access  Public
+exports.verifyEmail = async (req, res, next) => {
+  try {
+    const { token } = req.params;
+    const hashedToken = hashToken(token);
+
+    const user = await User.findOne({ emailVerificationToken: hashedToken });
+
+    if (!user) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid verification token'
+      });
+    }
+
+    user.isEmailVerified = true;
+    user.emailVerificationToken = undefined;
+    await user.save();
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Email verified successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get current user
+// @route   GET /api/v1/auth/me
+// @access  Private
+exports.getMe = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id).populate('ownedParcels');
+
+    res.status(200).json({
+      status: 'success',
+      data: { user }
+    });
+  } catch (error) {
+    next(error);
+  }
+};

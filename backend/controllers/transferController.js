@@ -1,0 +1,209 @@
+const Transfer = require('../models/Transfer');
+const LandParcel = require('../models/LandParcel');
+const User = require('../models/User');
+
+// Initiate Transfer
+exports.initiateTransfer = async (req, res, next) => {
+  try {
+    const { landParcel, newOwnerNationalId, transferType, transferAmount, notes } = req.body;
+
+    const parcel = await LandParcel.findById(landParcel);
+    if (!parcel) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Land parcel not found'
+      });
+    }
+
+    const newOwner = await User.findOne({ nationalId: newOwnerNationalId });
+    if (!newOwner) {
+      return res.status(404).json({
+        status: 'error',
+        message: `Citizen with National ID ${newOwnerNationalId} is not registered in the system.`
+      });
+    }
+
+    const transfer = await Transfer.create({
+      landParcel,
+      previousOwner: parcel.currentOwner,
+      newOwner: newOwner._id,
+      initiatedBy: req.user._id,
+      transferType: transferType || 'sale',
+      transferAmount: Number(transferAmount) || 0,
+      approvalNotes: notes || ''
+    });
+
+    // Update parcel status to pending_transfer
+    await LandParcel.findByIdAndUpdate(landParcel, { status: 'pending_transfer' });
+
+    res.status(201).json({
+      status: 'success',
+      data: { transfer }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get All Transfers
+exports.getAllTransfers = async (req, res, next) => {
+  try {
+    const { status } = req.query;
+    const query = {};
+
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+
+    if (req.user?.role === 'Land_Owner') {
+      query.$or = [
+        { previousOwner: req.user._id },
+        { newOwner: req.user._id }
+      ];
+    }
+
+    const transfers = await Transfer.find(query)
+      .populate('landParcel', 'parcelNumber location sizeInAcres titleDeedNumber')
+      .populate('previousOwner', 'fullName nationalId email')
+      .populate('newOwner', 'fullName nationalId email')
+      .populate('processedBy', 'fullName')
+      .sort({ createdAt: -1 });
+
+    // Format for frontend
+    const formatted = transfers.map(t => ({
+      id: t._id,
+      parcelNumber: t.landParcel?.parcelNumber || 'Parcel',
+      previousOwner: t.previousOwner?.fullName || 'Previous Owner',
+      newOwner: t.newOwner?.fullName || 'New Owner',
+      transferType: t.transferType,
+      transferAmount: t.transferAmount,
+      status: t.status,
+      initiatedDate: t.createdAt ? new Date(t.createdAt).toLocaleDateString() : 'Recent'
+    }));
+
+    res.status(200).json({
+      status: 'success',
+      data: { transfers: formatted }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get Transfer by ID
+exports.getTransferById = async (req, res, next) => {
+  try {
+    const transfer = await Transfer.findById(req.params.id)
+      .populate('landParcel')
+      .populate('previousOwner', 'fullName email nationalId phoneNumber')
+      .populate('newOwner', 'fullName email nationalId phoneNumber')
+      .populate('processedBy', 'fullName role');
+
+    if (!transfer) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Transfer request not found'
+      });
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: { transfer }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Approve Transfer
+exports.approveTransfer = async (req, res, next) => {
+  try {
+    const transfer = await Transfer.findById(req.params.id);
+    if (!transfer) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Transfer request not found'
+      });
+    }
+
+    transfer.status = 'approved';
+    transfer.processedBy = req.user._id;
+    transfer.processedDate = new Date();
+    await transfer.save();
+
+    // Update Land Parcel Owner and History
+    const parcel = await LandParcel.findById(transfer.landParcel);
+    if (parcel) {
+      parcel.ownershipHistory.push({
+        owner: transfer.newOwner,
+        acquiredDate: new Date(),
+        transferMethod: transfer.transferType,
+        notes: `Transfer approved by Officer ${req.user.fullName}`
+      });
+      parcel.currentOwner = transfer.newOwner;
+      parcel.status = 'active';
+      await parcel.save();
+    }
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Transfer approved and title successfully conveyed to new owner.'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Reject Transfer
+exports.rejectTransfer = async (req, res, next) => {
+  try {
+    const { rejectionReason } = req.body;
+    const transfer = await Transfer.findById(req.params.id);
+    if (!transfer) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Transfer request not found'
+      });
+    }
+
+    transfer.status = 'rejected';
+    transfer.rejectionReason = rejectionReason || 'Rejection specified by land officer';
+    transfer.processedBy = req.user._id;
+    transfer.processedDate = new Date();
+    await transfer.save();
+
+    // Reset parcel status back to active
+    await LandParcel.findByIdAndUpdate(transfer.landParcel, { status: 'active' });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Transfer request rejected.'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Cancel Transfer
+exports.cancelTransfer = async (req, res, next) => {
+  try {
+    const transfer = await Transfer.findById(req.params.id);
+    if (!transfer) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Transfer not found'
+      });
+    }
+
+    transfer.status = 'cancelled';
+    await transfer.save();
+    await LandParcel.findByIdAndUpdate(transfer.landParcel, { status: 'active' });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Transfer cancelled.'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
