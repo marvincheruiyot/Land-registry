@@ -85,20 +85,31 @@
                       </span>
                     </td>
                     <td class="text-end py-3">
-                      <button
-                        v-if="u.isActive !== false"
-                        @click="deactivateUser(u.id)"
-                        class="btn btn-sm btn-light text-danger me-2"
-                      >
-                        <i class="bi bi-person-dash"></i> Deactivate
-                      </button>
-                      <button
-                        v-else
-                        @click="activateUser(u.id)"
-                        class="btn btn-sm btn-dark"
-                      >
-                        <i class="bi bi-person-check"></i> Activate
-                      </button>
+                      <div class="d-flex gap-2 justify-content-end">
+                        <button
+                          v-if="u.isActive !== false"
+                          @click="deactivateUser(u.id)"
+                          class="btn btn-sm btn-light text-warning"
+                          title="Deactivate user"
+                        >
+                          <i class="bi bi-person-dash"></i>
+                        </button>
+                        <button
+                          v-else
+                          @click="activateUser(u.id)"
+                          class="btn btn-sm btn-success"
+                          title="Activate user"
+                        >
+                          <i class="bi bi-person-check"></i>
+                        </button>
+                        <button
+                          @click="deleteUser(u.id, u.name)"
+                          class="btn btn-sm btn-danger"
+                          title="Delete user permanently"
+                        >
+                          <i class="bi bi-trash-fill"></i>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 </tbody>
@@ -285,6 +296,35 @@ export default {
       }
     }
 
+    const deleteUser = async (userId, userName) => {
+      if (!userId) return
+      
+      const confirmed = confirm(
+        `⚠️ WARNING: DELETE USER\n\n` +
+        `Are you sure you want to PERMANENTLY delete "${userName}"?\n\n` +
+        `This action will:\n` +
+        `• Remove the user account completely\n` +
+        `• Cannot be undone\n\n` +
+        `Type "DELETE" in the next prompt to confirm.`
+      )
+      
+      if (!confirmed) return
+      
+      const confirmText = prompt('Type "DELETE" to confirm permanent deletion:')
+      if (confirmText !== 'DELETE') {
+        alert('Deletion cancelled - confirmation text did not match')
+        return
+      }
+      
+      try {
+        await api.delete(`/admin/users/${userId}`)
+        alert('User deleted successfully')
+        await loadUsers()
+      } catch (err) {
+        alert(err.response?.data?.message || 'Error deleting user')
+      }
+    }
+
     const searchUsers = () => {
       loadUsers()
     }
@@ -305,6 +345,7 @@ export default {
       resetUserForm,
       deactivateUser,
       activateUser,
+      deleteUser,
       searchUsers
     }
   }

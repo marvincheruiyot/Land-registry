@@ -71,7 +71,7 @@ app.use(`/api/${API_VERSION}/parcels`, landParcelRoutes);
 app.use(`/api/${API_VERSION}/transfers`, transferRoutes);
 app.use(`/api/${API_VERSION}/documents`, documentRoutes);
 app.use(`/api/${API_VERSION}/verify`, verificationRoutes);
-app.use(`/api/${API_VERSION}/audit`, auditRoutes);
+app.use(`/api/${API_VERSION}/audit-logs`, auditRoutes);
 app.use(`/api/${API_VERSION}/reports`, reportRoutes);
 app.use(`/api/${API_VERSION}/admin`, adminRoutes);
 

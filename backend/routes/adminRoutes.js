@@ -12,6 +12,7 @@ router.get('/users/:id', adminController.getUserById);
 router.put('/users/:id/role', adminController.updateUserRole);
 router.put('/users/:id/deactivate', adminController.deactivateUser);
 router.put('/users/:id/activate', adminController.activateUser);
+router.delete('/users/:id', adminController.deleteUser);
 
 // Land parcel management
 router.get('/parcels', adminController.getAllParcels);

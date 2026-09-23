@@ -10,7 +10,7 @@
         <p class="text-muted small">Sign in to your Kenyan Land Registry Account</p>
       </div>
 
-      <form @submit.prevent="handleLogin">
+      <form @submit.prevent="handleLogin" autocomplete="off">
         <div class="mb-3">
           <label class="form-label fw-semibold text-dark small">Email Address</label>
           <div class="position-relative">
@@ -20,6 +20,7 @@
               type="email"
               class="form-control rounded-pill py-2 ps-5 bg-light border-0"
               placeholder="e.g. admin@landregistry.go.ke"
+              autocomplete="off"
               required
             />
           </div>
@@ -39,6 +40,7 @@
               :type="showPassword ? 'text' : 'password'"
               class="form-control rounded-pill py-2 ps-5 pe-5 bg-light border-0"
               placeholder="Enter your password"
+              autocomplete="new-password"
               required
             />
             <button
@@ -108,15 +110,13 @@ export default {
       try {
         await authStore.login(form.value)
         
-        // Check user role and redirect accordingly
+        // Redirect based on role
         if (authStore.isAdministrator) {
-          router.push('/admin')
+          router.push('/admindashboard') // Admin dashboard
         } else if (authStore.isLandOfficer) {
-          router.push('/officer')
+          router.push('/officer') // Officer dashboard
         } else {
-          // Redirect to the page the user originally wanted, or dashboard
-          const redirect = route.query.redirect || '/dashboard'
-          router.push(redirect)
+          router.push('/userdashboard') // Land Owner dashboard
         }
       } catch (err) {
         error.value = err.response?.data?.message || 'Login failed. Please check your credentials.'

@@ -45,10 +45,16 @@ const routes = [
     meta: { requiresAuth: false }
   },
   {
-    path: '/dashboard',
+    path: '/admindashboard',
     name: 'Dashboard',
     component: () => import('@/views/DashboardPage.vue'),
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, roles: ['Administrator'] }
+  },
+  {
+    path: '/userdashboard',
+    name: 'UserDashboard',
+    component: () => import('@/views/user/UserDashboard.vue'),
+    meta: { requiresAuth: true, roles: ['Land_Owner'] }
   },
   {
     path: '/officer',
@@ -108,6 +114,12 @@ const routes = [
     path: '/admin',
     name: 'Admin',
     component: () => import('@/views/admin/AdminDashboard.vue'),
+    meta: { requiresAuth: true, roles: ['Administrator'] }
+  },
+  {
+    path: '/settings',
+    name: 'SystemSettings',
+    component: () => import('@/views/admin/SystemSettings.vue'),
     meta: { requiresAuth: true, roles: ['Administrator'] }
   },
   {

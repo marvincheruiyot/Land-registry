@@ -5,7 +5,7 @@
       <div>
         <!-- Brand / Logo -->
         <router-link 
-          :to="isAdministrator && $route.path.startsWith('/admin') ? '/admin' : '/dashboard'" 
+          to="/admindashboard" 
           class="sidebar-brand text-decoration-none"
         >
           <div class="sidebar-logo-icon">
@@ -24,7 +24,7 @@
           </div>
 
           <router-link 
-            :to="isAdministrator && $route.path.startsWith('/admin') ? '/admin' : '/dashboard'" 
+            to="/admindashboard" 
             class="sidebar-nav-item text-decoration-none" 
             active-class="active"
           >
@@ -87,17 +87,17 @@
 
           <router-link
             v-if="isAdministrator"
-            to="/admin"
+            to="/settings"
             class="sidebar-nav-item text-decoration-none"
             active-class="active"
           >
-            <i class="bi bi-shield-lock-fill"></i>
-            <span>Admin Central</span>
+            <i class="bi bi-gear-fill"></i>
+            <span>System Settings</span>
           </router-link>
 
           <router-link to="/profile" class="sidebar-nav-item text-decoration-none" active-class="active">
             <i class="bi bi-person-gear"></i>
-            <span>Settings</span>
+            <span>My Profile</span>
           </router-link>
         </div>
       </div>
@@ -135,7 +135,7 @@
       <!-- Mobile toggler & search -->
       <div class="d-flex align-items-center gap-3">
         <router-link 
-          :to="isAdministrator && $route.path.startsWith('/admin') ? '/admin' : '/dashboard'" 
+          to="/admindashboard" 
           class="d-lg-none d-flex align-items-center gap-2 text-decoration-none"
         >
           <div class="sidebar-logo-icon" style="width: 36px; height: 36px; font-size: 1.1rem;">
@@ -144,40 +144,82 @@
           <span class="fw-bold text-dark">LandRegistry</span>
         </router-link>
 
-        <div class="position-relative d-none d-sm-block">
-          <i class="bi bi-search position-absolute text-muted" style="left: 1rem; top: 50%; transform: translateY(-50%);"></i>
-          <input
-            type="text"
-            class="search-input-pill"
-            placeholder="Search parcels, owners, IDs..."
-          />
+        <!-- Welcome Message -->
+        <div class="d-none d-lg-block ms-4">
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge badge-pill-custom badge-soft-yellow">
+              <i class="bi bi-shield-check-fill"></i>
+              Kenya National Portal
+            </span>
+          </div>
+          <p class="text-muted small mb-0 mt-1">
+            <i class="bi bi-calendar3"></i>
+            {{ currentDate }}
+          </p>
         </div>
       </div>
 
-      <!-- Right Header Actions (Quick actions, notifications, status) -->
+      <!-- Right Header Actions (notifications, profile) -->
       <div class="d-flex align-items-center gap-2 gap-md-3">
-        <router-link
-          v-if="isLandOfficer || isAdministrator"
-          to="/parcels/create"
-          class="btn btn-pill btn-yellow-pill d-none d-md-inline-flex"
-        >
-          <i class="bi bi-plus-lg"></i>
-          <span>New Parcel</span>
-        </router-link>
-
-        <router-link
-          to="/transfers/create"
-          class="btn btn-pill btn-dark-pill d-none d-sm-inline-flex"
-        >
-          <i class="bi bi-arrow-left-right"></i>
-          <span>Transfer</span>
-        </router-link>
-
         <!-- Notification Bell -->
-        <button class="btn btn-light-pill p-2 rounded-circle position-relative" style="width: 42px; height: 42px;">
-          <i class="bi bi-bell-fill text-dark"></i>
-          <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>
-        </button>
+        <div class="dropdown">
+          <button class="btn btn-light-pill p-2 rounded-circle position-relative" style="width: 42px; height: 42px;" data-bs-toggle="dropdown">
+            <i class="bi bi-bell-fill text-dark"></i>
+            <span v-if="unreadCount > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">
+              {{ unreadCount > 99 ? '99+' : unreadCount }}
+            </span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 p-0 mt-2" style="width: 380px; max-height: 500px; overflow-y: auto;">
+            <!-- Header -->
+            <li class="px-3 py-3 border-bottom bg-light">
+              <div class="d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0">Notifications</h6>
+                <button v-if="unreadCount > 0" @click="markAllAsRead" class="btn btn-sm btn-link text-primary text-decoration-none p-0">
+                  Mark all read
+                </button>
+              </div>
+              <small class="text-muted">{{ unreadCount }} unread notifications</small>
+            </li>
+
+            <!-- Notifications List -->
+            <div v-if="loading" class="text-center py-4">
+              <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+            </div>
+
+            <div v-else-if="notifications.length === 0" class="text-center py-5">
+              <i class="bi bi-bell-slash fs-1 text-muted mb-2 d-block"></i>
+              <p class="text-muted small mb-0">No notifications yet</p>
+            </div>
+
+            <li v-else v-for="notif in notifications" :key="notif._id" 
+                :class="['dropdown-item-text', notif.read ? '' : 'bg-primary-subtle']"
+                style="cursor: pointer;"
+                @click="markAsRead(notif._id)">
+              <div class="d-flex gap-3 py-2 px-3">
+                <div :class="['avatar-circle flex-shrink-0', getNotificationIcon(notif.action).bgClass]" style="width: 40px; height: 40px;">
+                  <i :class="['bi', getNotificationIcon(notif.action).icon]"></i>
+                </div>
+                <div class="flex-grow-1">
+                  <div class="d-flex justify-content-between align-items-start mb-1">
+                    <strong class="small">{{ getNotificationTitle(notif.action) }}</strong>
+                    <small class="text-muted">{{ formatTime(notif.createdAt) }}</small>
+                  </div>
+                  <p class="small text-muted mb-0">{{ notif.description }}</p>
+                  <div v-if="notif.entityType" class="mt-1">
+                    <span class="badge bg-light text-dark small">{{ notif.entityType }}</span>
+                  </div>
+                </div>
+              </div>
+            </li>
+
+            <!-- Footer -->
+            <li class="px-3 py-2 border-top text-center">
+              <router-link to="/notifications" class="small text-decoration-none fw-semibold">
+                View All Notifications
+              </router-link>
+            </li>
+          </ul>
+        </div>
 
         <!-- Profile Dropdown -->
         <div class="dropdown">
@@ -224,9 +266,10 @@
 </template>
 
 <script>
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import api from '@/services/api'
 
 export default {
   name: 'Navbar',
@@ -244,23 +287,141 @@ export default {
       return names.map(n => n[0]).join('').toUpperCase().slice(0, 2)
     })
 
+    // Notifications
+    const notifications = ref([])
+    const unreadCount = ref(0)
+    const loading = ref(false)
+
+    const fetchNotifications = async () => {
+      loading.value = true
+      try {
+        // Fetch from audit logs
+        const response = await api.get('/audit-logs?limit=20')
+        if (response.data?.data?.logs) {
+          notifications.value = response.data.data.logs.map(log => ({
+            _id: log._id,
+            action: log.action,
+            description: log.description,
+            entityType: log.entityType,
+            createdAt: log.createdAt,
+            read: false // You can add a read field to your audit log model
+          }))
+          
+          // Count unread (for now, all are unread - you can enhance this)
+          unreadCount.value = notifications.value.filter(n => !n.read).length
+        }
+      } catch (err) {
+        console.error('Error fetching notifications:', err)
+      } finally {
+        loading.value = false
+      }
+    }
+
+    const markAsRead = (notifId) => {
+      const notif = notifications.value.find(n => n._id === notifId)
+      if (notif) {
+        notif.read = true
+        unreadCount.value = notifications.value.filter(n => !n.read).length
+      }
+    }
+
+    const markAllAsRead = () => {
+      notifications.value.forEach(n => n.read = true)
+      unreadCount.value = 0
+    }
+
+    const getNotificationIcon = (action) => {
+      const icons = {
+        'LOGIN': { icon: 'bi-box-arrow-in-right', bgClass: 'bg-success text-white' },
+        'LOGOUT': { icon: 'bi-box-arrow-right', bgClass: 'bg-secondary text-white' },
+        'USER_CREATED': { icon: 'bi-person-plus-fill', bgClass: 'bg-primary text-white' },
+        'PARCEL_CREATED': { icon: 'bi-map', bgClass: 'bg-warning text-dark' },
+        'TRANSFER_INITIATED': { icon: 'bi-arrow-left-right', bgClass: 'bg-info text-white' },
+        'TRANSFER_APPROVED': { icon: 'bi-check-circle-fill', bgClass: 'bg-success text-white' },
+        'TRANSFER_REJECTED': { icon: 'bi-x-circle-fill', bgClass: 'bg-danger text-white' },
+        'DOCUMENT_UPLOADED': { icon: 'bi-file-earmark-arrow-up', bgClass: 'bg-primary text-white' },
+        'PASSWORD_CHANGED': { icon: 'bi-key-fill', bgClass: 'bg-warning text-dark' },
+        'PASSWORD_RESET': { icon: 'bi-shield-lock-fill', bgClass: 'bg-danger text-white' }
+      }
+      return icons[action] || { icon: 'bi-info-circle-fill', bgClass: 'bg-light text-dark' }
+    }
+
+    const getNotificationTitle = (action) => {
+      const titles = {
+        'LOGIN': 'Login Activity',
+        'LOGOUT': 'Logout Activity',
+        'USER_CREATED': 'New User Registered',
+        'PARCEL_CREATED': 'New Parcel Added',
+        'TRANSFER_INITIATED': 'Transfer Initiated',
+        'TRANSFER_APPROVED': 'Transfer Approved',
+        'TRANSFER_REJECTED': 'Transfer Rejected',
+        'DOCUMENT_UPLOADED': 'Document Uploaded',
+        'PASSWORD_CHANGED': 'Password Changed',
+        'PASSWORD_RESET': 'Password Reset'
+      }
+      return titles[action] || 'System Activity'
+    }
+
+    const formatTime = (date) => {
+      if (!date) return ''
+      const now = new Date()
+      const then = new Date(date)
+      const diffMs = now - then
+      const diffMins = Math.floor(diffMs / 60000)
+      const diffHours = Math.floor(diffMs / 3600000)
+      const diffDays = Math.floor(diffMs / 86400000)
+
+      if (diffMins < 1) return 'Just now'
+      if (diffMins < 60) return `${diffMins}m ago`
+      if (diffHours < 24) return `${diffHours}h ago`
+      if (diffDays < 7) return `${diffDays}d ago`
+      return then.toLocaleDateString()
+    }
+
     const formatRole = (role) => {
       if (!role) return 'Public User'
       return role.replace('_', ' ')
     }
+
+    const currentDate = computed(() => {
+      const now = new Date()
+      return now.toLocaleDateString('en-KE', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
+    })
 
     const handleLogout = async () => {
       await authStore.logout()
       router.push({ name: 'Login' })
     }
 
+    onMounted(() => {
+      if (user.value) {
+        fetchNotifications()
+        // Refresh notifications every 30 seconds
+        setInterval(fetchNotifications, 30000)
+      }
+    })
+
     return {
       user,
       userInitials,
       isLandOfficer,
       isAdministrator,
+      notifications,
+      unreadCount,
+      loading,
       formatRole,
-      handleLogout
+      currentDate,
+      handleLogout,
+      markAsRead,
+      markAllAsRead,
+      getNotificationIcon,
+      getNotificationTitle,
+      formatTime
     }
   }
 }

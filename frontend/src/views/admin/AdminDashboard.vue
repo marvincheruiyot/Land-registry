@@ -40,12 +40,6 @@
             <span>Transfers</span>
           </button>
 
-          <button @click="handleSectionChange('monitoring')" 
-            :class="['sidebar-nav-item', activeSection === 'monitoring' ? 'active' : '']">
-            <i class="bi bi-activity"></i>
-            <span>System Monitoring</span>
-          </button>
-
           <button @click="handleSectionChange('reports')" 
             :class="['sidebar-nav-item', activeSection === 'reports' ? 'active' : '']">
             <i class="bi bi-bar-chart-fill"></i>
@@ -63,7 +57,7 @@
       <!-- User Profile Section at Bottom -->
       <div>
         <div class="mb-2">
-          <router-link to="/dashboard" class="sidebar-nav-item text-decoration-none">
+          <router-link to="/admindashboard" class="sidebar-nav-item text-decoration-none">
             <i class="bi bi-house-fill"></i>
             <span>Exit Admin</span>
           </router-link>

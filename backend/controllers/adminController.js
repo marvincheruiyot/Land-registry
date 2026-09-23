@@ -209,6 +209,74 @@ exports.activateUser = async (req, res, next) => {
   }
 };
 
+exports.deleteUser = async (req, res, next) => {
+  try {
+    const userId = req.params.id;
+
+    // Prevent deleting yourself
+    if (userId === req.user._id.toString()) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Cannot delete your own account'
+      });
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+
+    // Check if user owns any land parcels
+    const ownedParcels = await LandParcel.countDocuments({ currentOwner: userId });
+    if (ownedParcels > 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: `Cannot delete user who owns ${ownedParcels} land parcel(s). Transfer ownership first.`
+      });
+    }
+
+    // Check if user has pending transfers
+    const pendingTransfers = await Transfer.countDocuments({
+      $or: [
+        { currentOwner: userId },
+        { newOwner: userId }
+      ],
+      status: 'pending'
+    });
+
+    if (pendingTransfers > 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: `Cannot delete user with ${pendingTransfers} pending transfer(s). Complete or cancel them first.`
+      });
+    }
+
+    // Create audit log before deletion
+    await AuditLog.create({
+      user: req.user._id,
+      action: 'DELETE_USER',
+      resourceType: 'User',
+      resourceId: user._id,
+      details: `Permanently deleted user: ${user.fullName} (${user.email})`,
+      ipAddress: req.ip
+    });
+
+    // Delete the user
+    await User.findByIdAndDelete(userId);
+
+    res.status(200).json({
+      status: 'success',
+      message: 'User deleted successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Land Parcel Management
 exports.getAllParcels = async (req, res, next) => {
   try {

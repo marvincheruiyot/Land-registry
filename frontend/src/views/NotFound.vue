@@ -10,7 +10,7 @@
         The page or parcel registry endpoint you requested does not exist or has been relocated.
       </p>
       <div class="d-flex justify-content-center gap-2">
-        <router-link to="/dashboard" class="btn btn-pill btn-dark-pill">
+        <router-link to="/admindashboard" class="btn btn-pill btn-dark-pill">
           <i class="bi bi-grid-fill"></i> Go to Dashboard
         </router-link>
         <router-link to="/" class="btn btn-pill btn-light-pill">

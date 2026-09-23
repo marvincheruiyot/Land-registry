@@ -24,7 +24,7 @@
                 <i class="bi bi-map fs-5"></i>
               </div>
               <span class="badge bg-secondary-subtle text-light rounded-pill px-3 py-1">
-                +12% this mo
+                +12% month
               </span>
             </div>
             <div>
@@ -134,22 +134,22 @@
                 <circle cx="105" cy="105" r="75" fill="none" stroke="#f1f3f7" stroke-width="26" />
                 <circle
                   cx="105" cy="105" r="75" fill="none" stroke="#151821" stroke-width="26"
-                  stroke-dasharray="290 471" stroke-dashoffset="0"
+                  :stroke-dasharray="`${(residentialPercentage / 100) * 471} 471`" stroke-dashoffset="0"
                   transform="rotate(-90 105 105)" stroke-linecap="round"
                 />
                 <circle
                   cx="105" cy="105" r="75" fill="none" stroke="#f6c535" stroke-width="26"
-                  stroke-dasharray="115 471" stroke-dashoffset="-290"
+                  :stroke-dasharray="`${(commercialPercentage / 100) * 471} 471`" :stroke-dashoffset="`-${(residentialPercentage / 100) * 471}`"
                   transform="rotate(-90 105 105)" stroke-linecap="round"
                 />
                 <circle
                   cx="105" cy="105" r="75" fill="none" stroke="#3d70f5" stroke-width="26"
-                  stroke-dasharray="60 471" stroke-dashoffset="-405"
+                  :stroke-dasharray="`${(agriculturalPercentage / 100) * 471} 471`" :stroke-dashoffset="`-${((residentialPercentage + commercialPercentage) / 100) * 471}`"
                   transform="rotate(-90 105 105)" stroke-linecap="round"
                 />
               </svg>
               <div class="position-absolute text-center">
-                <div class="fs-3 fw-bold text-dark lh-1">100%</div>
+                <div class="fs-3 fw-bold text-dark lh-1">{{ digitalizationPercentage }}%</div>
                 <small class="text-muted" style="font-size: 0.75rem;">Digitalized</small>
               </div>
             </div>
@@ -160,27 +160,27 @@
                   <span class="rounded-circle d-inline-block" style="width: 10px; height: 10px; background: #151821;"></span>
                   <span class="text-muted small">Freehold Residential</span>
                 </div>
-                <span class="fw-bold small">62%</span>
+                <span class="fw-bold small">{{ residentialPercentage }}%</span>
               </div>
               <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
                 <div class="d-flex align-items-center gap-2">
                   <span class="rounded-circle d-inline-block" style="width: 10px; height: 10px; background: #f6c535;"></span>
                   <span class="text-muted small">Leasehold Commercial</span>
                 </div>
-                <span class="fw-bold small">25%</span>
+                <span class="fw-bold small">{{ commercialPercentage }}%</span>
               </div>
               <div class="d-flex justify-content-between align-items-center py-1">
                 <div class="d-flex align-items-center gap-2">
                   <span class="rounded-circle d-inline-block" style="width: 10px; height: 10px; background: #3d70f5;"></span>
                   <span class="text-muted small">Agricultural / Public</span>
                 </div>
-                <span class="fw-bold small">13%</span>
+                <span class="fw-bold small">{{ agriculturalPercentage }}%</span>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Recent Transfer Workflow Requests (Table with rounded avatars & status badges) -->
+        <!-- Recent Transfer Workflow Requests -->
         <div class="col-12 col-lg-7 col-xl-8">
           <div class="dash-card h-100 d-flex flex-column justify-content-between">
             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -325,29 +325,48 @@ export default {
     const isAdministrator = computed(() => authStore.isAdministrator)
 
     const stats = ref({
-      parcelsCount: 42,
-      transfersCount: 8,
-      documentsCount: 65
+      parcelsCount: 0,
+      transfersCount: 0,
+      documentsCount: 0
     })
 
     const recentTransfers = ref([])
+    const parcelCategories = ref({
+      residential: 0,
+      commercial: 0,
+      agricultural: 0,
+      total: 0
+    })
 
     const fetchDashboardData = async () => {
       try {
         const [parcelsRes, transfersRes] = await Promise.allSettled([
-          api.get('/parcels?limit=5'),
+          api.get('/parcels'),
           api.get('/transfers?limit=4')
         ])
 
         if (parcelsRes.status === 'fulfilled' && parcelsRes.value?.data?.data) {
-          stats.value.parcelsCount = parcelsRes.value.data.data.total || parcelsRes.value.data.data.parcels?.length || 0
+          const parcelsData = parcelsRes.value.data.data.parcels || []
+          stats.value.parcelsCount = parcelsData.length
+          
+          // Calculate parcel categorization from real data
+          parcelCategories.value.total = parcelsData.length
+          parcelCategories.value.residential = parcelsData.filter(p => 
+            p.landUse && p.landUse.toLowerCase().includes('residential')
+          ).length
+          parcelCategories.value.commercial = parcelsData.filter(p => 
+            p.landUse && p.landUse.toLowerCase().includes('commercial')
+          ).length
+          parcelCategories.value.agricultural = parcelsData.filter(p => 
+            p.landUse && (p.landUse.toLowerCase().includes('agricultural') || p.landUse.toLowerCase().includes('public'))
+          ).length
         }
         
         if (transfersRes.status === 'fulfilled' && transfersRes.value?.data?.data) {
           const transfers = transfersRes.value.data.data.transfers || []
-          stats.value.transfersCount = transfersRes.value.data.data.total || transfers.length || 0
+          stats.value.transfersCount = transfers.length
           
-          // Map transfers to display format
+          // Map transfers to display format with real data
           recentTransfers.value = transfers.slice(0, 4).map(t => ({
             parcelNumber: t.landParcel?.parcelNumber || 'N/A',
             type: t.transferType || 'Transfer',
@@ -359,10 +378,33 @@ export default {
             link: `/transfers`
           }))
         }
+
+        // Set documents count (parcels * 2 as estimate)
+        stats.value.documentsCount = stats.value.parcelsCount * 2
       } catch (err) {
         console.error('Error loading dashboard data:', err)
       }
     }
+
+    // Computed properties for parcel categorization percentages
+    const residentialPercentage = computed(() => {
+      if (parcelCategories.value.total === 0) return 0
+      return Math.round((parcelCategories.value.residential / parcelCategories.value.total) * 100)
+    })
+
+    const commercialPercentage = computed(() => {
+      if (parcelCategories.value.total === 0) return 0
+      return Math.round((parcelCategories.value.commercial / parcelCategories.value.total) * 100)
+    })
+
+    const agriculturalPercentage = computed(() => {
+      if (parcelCategories.value.total === 0) return 0
+      return Math.round((parcelCategories.value.agricultural / parcelCategories.value.total) * 100)
+    })
+
+    const digitalizationPercentage = computed(() => {
+      return parcelCategories.value.total > 0 ? 100 : 0
+    })
 
     onMounted(() => {
       fetchDashboardData()
@@ -373,7 +415,12 @@ export default {
       isLandOfficer,
       isAdministrator,
       stats,
-      recentTransfers
+      recentTransfers,
+      parcelCategories,
+      residentialPercentage,
+      commercialPercentage,
+      agriculturalPercentage,
+      digitalizationPercentage
     }
   }
 }
@@ -387,5 +434,10 @@ export default {
 .hover-elevate:hover {
   transform: translateY(-3px);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.05);
+}
+
+.btn-check:checked + .btn-outline-secondary {
+  background-color: #212529;
+  color: white;
 }
 </style>

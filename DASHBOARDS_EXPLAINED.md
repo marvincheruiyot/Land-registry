@@ -1,122 +1,216 @@
 # Land Registry System - Dashboards Explained
 
-## 📊 There are TWO Different Dashboards:
+## 📊 There are THREE Different Dashboards (One Per Role):
 
-### 1. **Regular User Dashboard** (For Everyone)
-- **URL:** `http://localhost:5173/dashboard`
+### 1. **Administrator Dashboard**
+- **URL:** `http://localhost:3000/dashboard`
 - **Route Path:** `/dashboard`
 - **File:** `frontend/src/views/DashboardPage.vue`
-- **Who Can Access:** All logged-in users (Land Owners, Land Officers, Administrators)
+- **Who Can Access:** Users with **Administrator** role
+- **Login Redirect:** Administrators are automatically redirected here after login
 
 **Features:**
-- Personal overview of YOUR land parcels
-- YOUR transfer requests
-- YOUR documents
-- YOUR notifications
-- Quick verify functionality
-- Links to manage YOUR own data
+- System-wide overview and statistics
+- **Real-time Notifications Panel** (Only for Administrators)
+  - Shows all system activities (logins, transfers, parcel registrations, etc.)
+  - Auto-updates with audit log data
+  - Includes activity icons and timestamps
+- Parcel categorization with real data (Residential, Commercial, Agricultural)
+- Recent transfers from database
+- Quick action shortcuts (Verify Token, Search Registry, Upload Deed, Export Audit)
+- Links to User Management, Land Parcels, Transfers, Documents, Reports, Settings
 
 **Design:**
-- Has the shared Navbar component at the top
-- Shows "Welcome back, [Your Name]"
-- Personal statistics and data
-- Black, yellow, and white cards with your stats
+- Black, yellow, and white cards with system stats
+- Real-time donut chart showing parcel distribution
+- Notifications panel with live activity feed
+- Professional Nikitin-style design with hover effects
 
 ---
 
-### 2. **Admin Dashboard** (Administrators Only)
-- **URL:** `http://localhost:5173/admin`
-- **Route Path:** `/admin`
-- **File:** `frontend/src/views/admin/AdminDashboard.vue`
-- **Who Can Access:** ONLY users with Administrator role
+### 2. **Land Officer Dashboard**
+- **URL:** `http://localhost:3000/officer`
+- **Route Path:** `/officer`
+- **File:** `frontend/src/views/officer/OfficerDashboard.vue`
+- **Who Can Access:** Users with **Land Officer** role
+- **Login Redirect:** Land Officers are automatically redirected here after login
 
 **Features:**
-- Manage ALL users in the system
-- Create new users (any role)
-- Activate/Deactivate users
-- View and manage ALL land parcels system-wide
-- Register new land parcels for any owner
-- Search and filter across entire database
-- System-wide statistics
-- System monitoring
-- Generate reports
-- System settings
+- Pending transfers overview
+- Statistics: Total Parcels, Pending Transfers, Approved This Month, Documents Verified
+- Quick actions: Register New Parcel, Initiate Transfer, Verify Document, Review Transfer
+- Recent activity feed
+- Full CRUD operations for parcels and transfers
+- Approve/Reject transfer functionality
 
 **Design:**
-- Dedicated admin sidebar (no shared navbar)
-- Left sidebar with: Admin Overview, User Management, Land Parcels, Transfers, Monitoring, Reports, Settings
-- "Exit Admin" button to go back to regular dashboard
-- System-wide data and controls
+- Statistics cards with officer-specific metrics
+- Pending transfers table
+- Quick action modals
+- Activity timeline
+- Bootstrap-styled interface
 
 ---
 
-## 🔄 How to Switch Between Dashboards
+### 3. **Land Owner Dashboard (User Dashboard)**
+- **URL:** `http://localhost:3000/userdashboard`
+- **Route Path:** `/userdashboard`
+- **File:** `frontend/src/views/user/UserDashboard.vue`
+- **Who Can Access:** Users with **Land Owner** role
+- **Login Redirect:** Land Owners are automatically redirected here after login
 
-### When logged in as Administrator:
+**Features:**
+- MY parcels overview (only parcels owned by logged-in user)
+- MY transfer requests status
+- Top action bar with: Search, Transfer Land, Verify buttons
+- Notifications bell
+- Quick actions: View Parcel Details, Initiate Transfer, View Documents
+- Activity feed for personal transactions
 
-**From Regular Dashboard → Admin Dashboard:**
-1. Click the yellow **"Admin Panel"** button at the top right
-2. Or navigate to: `http://localhost:5173/admin`
-
-**From Admin Dashboard → Regular Dashboard:**
-1. Click **"Exit Admin"** button in the sidebar
-2. Or navigate to: `http://localhost:5173/dashboard`
-
----
-
-## 🎯 Quick Access Guide
-
-### You are logged in as Administrator, so you can:
-
-1. **See your personal data:**
-   - Go to `/dashboard`
-   - View your owned parcels
-   - Manage your transfers
-
-2. **Manage the entire system:**
-   - Click "Admin Panel" button OR go to `/admin`
-   - Create users, register parcels for anyone
-   - View all system data
-   - Monitor system health
+**Design:**
+- Personal statistics cards
+- My Parcels table
+- Transfer requests table
+- Quick actions for land owners
+- User-friendly interface focused on personal data
 
 ---
 
-## 📋 Summary Table
+## 🔄 Role-Based Login Redirects
 
-| Feature | Regular Dashboard | Admin Dashboard |
-|---------|------------------|-----------------|
-| **URL** | `/dashboard` | `/admin` |
-| **Access** | All users | Administrators only |
-| **Data Scope** | Personal data | System-wide data |
-| **Navigation** | Shared Navbar | Dedicated Sidebar |
-| **Can Create Users** | ❌ No | ✅ Yes |
-| **Can Register Parcels for Others** | ❌ No | ✅ Yes |
-| **View All Users** | ❌ No | ✅ Yes |
-| **View All Parcels** | ❌ No (only yours) | ✅ Yes |
-| **System Settings** | ❌ No | ✅ Yes |
+The system automatically redirects users after login based on their role:
+
+| User Role | Login Email | Redirect URL | Dashboard Name |
+|-----------|------------|--------------|----------------|
+| **Administrator** | admin@landregistry.go.ke | `/dashboard` | Administrator Dashboard |
+| **Land Officer** | officer@landregistry.go.ke | `/officer` | Land Officer Dashboard |
+| **Land Owner** | (any land owner email) | `/userdashboard` | User Dashboard |
 
 ---
 
-## 💡 Tips
+## 🔔 Notifications System
 
-- **After login:** You land on Regular Dashboard by default
-- **To access Admin features:** Click "Admin Panel" button (only visible to Administrators)
-- **To go back:** Click "Exit Admin" in the admin sidebar
-- **Both dashboards are available to you** as an Administrator
-- **Regular users** (Land Owners, Land Officers) can ONLY see Regular Dashboard
+### Where Notifications Appear:
+
+1. **Navbar (All Users):**
+   - Bell icon with unread count badge
+   - Dropdown showing recent activities
+   - Auto-refreshes every 30 seconds
+   - Mark as read functionality
+
+2. **Administrator Dashboard Only:**
+   - Dedicated **System Notifications Panel** replacing the Recent Transfers section
+   - Shows ALL system activities for administrators:
+     - User logins/logouts
+     - User registrations
+     - Parcel creations
+     - Transfer initiations/approvals/rejections
+     - Document uploads
+     - Password changes
+   - Real-time activity icons with color coding
+   - Timestamp for each activity
+   - Refresh button to manually update
+   - Limited to latest 10 activities
+
+### Notification Types and Icons:
+
+| Action | Icon | Badge Color | Description |
+|--------|------|-------------|-------------|
+| LOGIN | 🔓 box-arrow-in-right | Success (Green) | User logged in |
+| LOGOUT | 🔒 box-arrow-right | Secondary (Gray) | User logged out |
+| USER_CREATED | 👤+ person-plus-fill | Primary (Blue) | New user registered |
+| PARCEL_CREATED | 🗺️ map | Warning (Yellow) | New parcel added |
+| TRANSFER_INITIATED | ↔️ arrow-left-right | Info (Cyan) | Transfer started |
+| TRANSFER_APPROVED | ✅ check-circle-fill | Success (Green) | Transfer approved |
+| TRANSFER_REJECTED | ❌ x-circle-fill | Danger (Red) | Transfer rejected |
+| DOCUMENT_UPLOADED | 📄↑ file-earmark-arrow-up | Primary (Blue) | Document uploaded |
+| PASSWORD_CHANGED | 🔑 key-fill | Warning (Yellow) | Password changed |
+| PASSWORD_RESET | 🛡️🔒 shield-lock-fill | Danger (Red) | Password reset |
 
 ---
 
-## 🔐 Current Login
+## 🎯 Key Features Per Dashboard
 
-You are logged in as:
-```
-Email: admin@landregistry.go.ke
-Role: Administrator
-```
+### Administrator Dashboard Features:
+- ✅ System-wide statistics (all parcels, transfers, documents)
+- ✅ **Real-time notifications panel** (UNIQUE TO ADMINS)
+- ✅ Real parcel categorization from database
+- ✅ Recent transfers with live data
+- ✅ Verify Token shortcut
+- ✅ Access to all management pages via sidebar
+- ✅ System settings access
 
-You have access to BOTH dashboards!
+### Land Officer Dashboard Features:
+- ✅ Pending transfers management
+- ✅ Register new parcels
+- ✅ Initiate transfers
+- ✅ Verify documents
+- ✅ Approve/Reject transfers
+- ✅ Activity timeline
+
+### Land Owner Dashboard Features:
+- ✅ View MY parcels only
+- ✅ View MY transfer requests
+- ✅ Initiate new transfers
+- ✅ Verify land ownership
+- ✅ Search functionality
+- ✅ Personal activity feed
 
 ---
 
-**Last Updated:** September 20, 2026
+## 📋 Data Sources
+
+All dashboards now pull **REAL DATA** from the database:
+
+1. **Parcel Categorization:**
+   - Counts actual parcels by land use type (Residential, Commercial, Agricultural)
+   - Calculates real percentages
+   - Updates donut chart dynamically
+
+2. **Recent Transfers:**
+   - Fetches latest 4 transfers from database
+   - Shows actual status (Pending, Approved, Rejected, In Review)
+   - Displays real transferee names and parcel numbers
+
+3. **Statistics:**
+   - Parcels count: Actual count from database
+   - Transfers count: Active transfers count
+   - Documents count: Estimated as parcels × 2
+
+4. **Notifications (Admin Only):**
+   - Fetches from audit logs API
+   - Shows latest 10 system activities
+   - Real-time data from AuditLog collection
+
+---
+
+## 🚀 Getting Started
+
+### As Administrator:
+1. Login with: `admin@landregistry.go.ke`
+2. You'll land on `/dashboard` (Administrator Dashboard)
+3. View system statistics and notifications
+4. Access management features from sidebar
+
+### As Land Officer:
+1. Login with: `officer@landregistry.go.ke`
+2. You'll land on `/officer` (Land Officer Dashboard)
+3. Manage pending transfers and parcels
+
+### As Land Owner:
+1. Login with your credentials
+2. You'll land on `/userdashboard` (User Dashboard)
+3. View and manage your parcels and transfers
+
+---
+
+## 🔧 System Settings
+
+System Settings (Theme, Font Size, Language, etc.) are accessible via:
+- **Sidebar navigation** (under Settings)
+- **Only for Administrators**
+- Located at route: `/settings`
+
+---
+
+**Last Updated:** September 21, 2026
