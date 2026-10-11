@@ -17,6 +17,7 @@ const verificationRoutes = require('./routes/verificationRoutes');
 const auditRoutes = require('./routes/auditRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const supportRoutes = require('./routes/supportRoutes');
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
@@ -74,6 +75,7 @@ app.use(`/api/${API_VERSION}/verify`, verificationRoutes);
 app.use(`/api/${API_VERSION}/audit-logs`, auditRoutes);
 app.use(`/api/${API_VERSION}/reports`, reportRoutes);
 app.use(`/api/${API_VERSION}/admin`, adminRoutes);
+app.use(`/api/${API_VERSION}/support-tickets`, supportRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

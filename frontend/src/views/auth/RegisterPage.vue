@@ -235,8 +235,22 @@ export default {
 
       try {
         const { confirmPassword, ...registerData } = form.value
-        await authStore.register(registerData)
-        success.value = 'Registration successful! Redirecting to dashboard...'
+        // Call backend API directly without auto-login
+        const response = await fetch('http://localhost:5000/api/v1/auth/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(registerData)
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Registration failed')
+        }
+
+        success.value = 'Registration successful! Please login with your credentials.'
         
         // Clear the form
         form.value = {
@@ -250,13 +264,12 @@ export default {
           physicalAddress: ''
         }
         
+        // Redirect to login page after 2 seconds
         setTimeout(() => {
-          router.push({ name: 'Dashboard' })
-        }, 1200)
+          router.push({ name: 'Login' })
+        }, 2000)
       } catch (err) {
-        error.value = err.response?.data?.message ||
-                      err.response?.data?.errors?.[0]?.message ||
-                      'Registration failed. Please verify your details.'
+        error.value = err.message || 'Registration failed. Please verify your details.'
       } finally {
         loading.value = false
       }

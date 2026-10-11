@@ -399,12 +399,27 @@ exports.createParcel = async (req, res, next) => {
     // Create audit log
     await AuditLog.create({
       user: req.user._id,
-      action: 'CREATE_PARCEL',
+      action: owner.isPlaceholder ? 'CREATE_PARCEL' : 'PARCEL_ASSIGNED',
       resourceType: 'LandParcel',
       resourceId: parcel._id,
-      details: `Registered new land parcel: ${parcelNumber} for National ID: ${ownerNationalId}`,
+      details: owner.isPlaceholder 
+        ? `Registered new land parcel: ${parcelNumber} for National ID: ${ownerNationalId}`
+        : `Assigned land parcel: ${parcelNumber} to ${owner.fullName} (${ownerNationalId})`,
       ipAddress: req.ip
     });
+
+    // If owner exists and is not a placeholder, create a specific notification for them
+    if (!owner.isPlaceholder) {
+      await AuditLog.create({
+        user: owner._id,
+        action: 'PARCEL_ASSIGNED',
+        resourceType: 'LandParcel',
+        resourceId: parcel._id,
+        details: `A new land parcel (${parcelNumber}) has been assigned to your account. Title Deed: ${titleDeedNumber || 'Pending'}`,
+        ipAddress: req.ip,
+        description: `New land parcel ${parcelNumber} registered under your name`
+      });
+    }
 
     const populatedParcel = await LandParcel.findById(parcel._id)
       .populate('currentOwner', 'fullName email nationalId')
@@ -451,15 +466,16 @@ exports.getDashboardStats = async (req, res, next) => {
 
 exports.getSystemLogs = async (req, res, next) => {
   try {
-    const { limit = 50, action, userId } = req.query;
+    const { limit = 50, action, userId, user } = req.query;
     const query = {};
 
     if (action) {
       query.action = action;
     }
 
-    if (userId) {
-      query.user = userId;
+    // Support both 'userId' and 'user' query parameters
+    if (userId || user) {
+      query.user = userId || user;
     }
 
     const logs = await AuditLog.find(query)

@@ -16,25 +16,84 @@ exports.register = async (req, res, next) => {
       $or: [{ email }, { nationalId }]
     });
 
+    let user;
+    let isUpgradingPlaceholder = false;
+
     if (existingUser) {
-      return res.status(400).json({
-        status: 'error',
-        message: existingUser.email === email 
-          ? 'Email already registered' 
-          : 'National ID already registered'
+      // If it's a placeholder user with matching National ID, upgrade it
+      if (existingUser.nationalId === nationalId && existingUser.isPlaceholder) {
+        // Upgrade the placeholder user to a real user
+        existingUser.fullName = fullName;
+        existingUser.email = email;
+        existingUser.phoneNumber = phoneNumber;
+        existingUser.password = password;
+        existingUser.role = role || existingUser.role || 'Land_Owner';
+        existingUser.physicalAddress = physicalAddress;
+        existingUser.isPlaceholder = false;
+        existingUser.isActive = true;
+        
+        await existingUser.save();
+        user = existingUser;
+        isUpgradingPlaceholder = true;
+
+        // Log placeholder upgrade
+        await AuditLog.log({
+          user: user._id,
+          action: 'PLACEHOLDER_UPGRADED',
+          entityType: 'User',
+          entityId: user._id,
+          description: `Placeholder user upgraded to real user: ${user.email}`,
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent')
+        });
+
+        // Create notification for the user about their land parcels
+        const LandParcel = require('../models/LandParcel');
+        const parcelCount = await LandParcel.countDocuments({ currentOwner: user._id });
+        
+        if (parcelCount > 0) {
+          await AuditLog.log({
+            user: user._id,
+            action: 'PARCEL_ASSIGNED',
+            entityType: 'User',
+            entityId: user._id,
+            description: `Welcome! You have ${parcelCount} land parcel(s) registered under your National ID ${nationalId}. Your account has been activated and you can now access your land records.`,
+            ipAddress: req.ip,
+            userAgent: req.get('user-agent')
+          });
+        }
+      } else {
+        // Real user already exists with this email or National ID
+        return res.status(400).json({
+          status: 'error',
+          message: existingUser.email === email 
+            ? 'Email already registered' 
+            : 'National ID already registered'
+        });
+      }
+    } else {
+      // Create new user
+      user = await User.create({
+        fullName,
+        email,
+        phoneNumber,
+        nationalId,
+        password,
+        role: role || 'Land_Owner',
+        physicalAddress
+      });
+
+      // Log registration
+      await AuditLog.log({
+        user: user._id,
+        action: 'USER_CREATED',
+        entityType: 'User',
+        entityId: user._id,
+        description: `User registered: ${user.email}`,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent')
       });
     }
-
-    // Create user
-    const user = await User.create({
-      fullName,
-      email,
-      phoneNumber,
-      nationalId,
-      password,
-      role: role || 'Land_Owner',
-      physicalAddress
-    });
 
     // Generate email verification token
     const verificationToken = generateRandomToken();
@@ -49,20 +108,11 @@ exports.register = async (req, res, next) => {
     const accessToken = generateToken(user._id);
     const refreshToken = generateRefreshToken(user._id);
 
-    // Log registration
-    await AuditLog.log({
-      user: user._id,
-      action: 'USER_CREATED',
-      entityType: 'User',
-      entityId: user._id,
-      description: `User registered: ${user.email}`,
-      ipAddress: req.ip,
-      userAgent: req.get('user-agent')
-    });
-
     res.status(201).json({
       status: 'success',
-      message: 'Registration successful. Please check your email to verify your account.',
+      message: isUpgradingPlaceholder 
+        ? 'Registration successful! Your land parcels are now linked to your account.' 
+        : 'Registration successful. Please check your email to verify your account.',
       data: {
         user: {
           id: user._id,

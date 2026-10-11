@@ -5,7 +5,7 @@
       <div>
         <!-- Brand / Logo -->
         <router-link 
-          to="/admindashboard" 
+          :to="dashboardRoute" 
           class="sidebar-brand text-decoration-none"
         >
           <div class="sidebar-logo-icon">
@@ -24,7 +24,7 @@
           </div>
 
           <router-link 
-            to="/admindashboard" 
+            :to="dashboardRoute" 
             class="sidebar-nav-item text-decoration-none" 
             active-class="active"
           >
@@ -32,35 +32,61 @@
             <span>Dashboard</span>
           </router-link>
 
-          <router-link to="/parcels" class="sidebar-nav-item text-decoration-none" active-class="active">
-            <i class="bi bi-map-fill"></i>
-            <span>Land Parcels</span>
-          </router-link>
-
-          <router-link to="/transfers" class="sidebar-nav-item text-decoration-none" active-class="active">
-            <i class="bi bi-arrow-left-right"></i>
-            <span>Transfers</span>
-          </router-link>
-
-          <router-link to="/documents" class="sidebar-nav-item text-decoration-none" active-class="active">
-            <i class="bi bi-file-earmark-text-fill"></i>
-            <span>Documents</span>
-          </router-link>
-
-          <router-link to="/verify" class="sidebar-nav-item text-decoration-none" active-class="active">
-            <i class="bi bi-patch-check-fill"></i>
-            <span>Verify Land</span>
-          </router-link>
-
-          <div class="px-2 mt-3" v-if="isLandOfficer || isAdministrator">
-            <router-link to="/parcels/create" class="btn btn-pill btn-dark-pill w-100 justify-content-center btn-sm py-2">
-              <i class="bi bi-plus-circle-fill me-1 text-warning"></i> Add New Parcel
+          <!-- Land Owner Menu -->
+          <template v-if="isLandOwner">
+            <router-link to="/my-parcels" class="sidebar-nav-item text-decoration-none" active-class="active">
+              <i class="bi bi-map-fill"></i>
+              <span>My Land Parcels</span>
             </router-link>
-          </div>
+
+            <router-link to="/my-transfers" class="sidebar-nav-item text-decoration-none" active-class="active">
+              <i class="bi bi-arrow-left-right"></i>
+              <span>My Transfers</span>
+            </router-link>
+
+            <router-link to="/my-documents" class="sidebar-nav-item text-decoration-none" active-class="active">
+              <i class="bi bi-file-earmark-text-fill"></i>
+              <span>My Documents</span>
+            </router-link>
+
+            <router-link to="/verify" class="sidebar-nav-item text-decoration-none" active-class="active">
+              <i class="bi bi-patch-check-fill"></i>
+              <span>Verify Document</span>
+            </router-link>
+          </template>
+
+          <!-- Officer & Admin Menu -->
+          <template v-else>
+            <router-link to="/parcels" class="sidebar-nav-item text-decoration-none" active-class="active">
+              <i class="bi bi-map-fill"></i>
+              <span>Land Parcels</span>
+            </router-link>
+
+            <router-link to="/transfers" class="sidebar-nav-item text-decoration-none" active-class="active">
+              <i class="bi bi-arrow-left-right"></i>
+              <span>Transfers</span>
+            </router-link>
+
+            <router-link to="/documents" class="sidebar-nav-item text-decoration-none" active-class="active">
+              <i class="bi bi-file-earmark-text-fill"></i>
+              <span>Documents</span>
+            </router-link>
+
+            <router-link to="/verify" class="sidebar-nav-item text-decoration-none" active-class="active">
+              <i class="bi bi-patch-check-fill"></i>
+              <span>Verify Land</span>
+            </router-link>
+
+            <div class="px-2 mt-3" v-if="isLandOfficer || isAdministrator">
+              <router-link to="/parcels/create" class="btn btn-pill btn-dark-pill w-100 justify-content-center btn-sm py-2">
+                <i class="bi bi-plus-circle-fill me-1 text-warning"></i> Add New Parcel
+              </router-link>
+            </div>
+          </template>
         </div>
 
         <!-- Management Section -->
-        <div class="nav-section">
+        <div class="nav-section" v-if="!isLandOwner">
           <div class="text-uppercase text-muted fw-bold px-3 mb-2" style="font-size: 0.68rem; letter-spacing: 1px;">
             Administration
           </div>
@@ -94,10 +120,27 @@
             <i class="bi bi-gear-fill"></i>
             <span>System Settings</span>
           </router-link>
+        </div>
+
+        <!-- User Settings Section (for all users) -->
+        <div class="nav-section">
+          <div class="text-uppercase text-muted fw-bold px-3 mb-2" style="font-size: 0.68rem; letter-spacing: 1px;">
+            Settings
+          </div>
 
           <router-link to="/profile" class="sidebar-nav-item text-decoration-none" active-class="active">
             <i class="bi bi-person-gear"></i>
             <span>My Profile</span>
+          </router-link>
+
+          <router-link v-if="isLandOwner" to="/notifications" class="sidebar-nav-item text-decoration-none" active-class="active">
+            <i class="bi bi-bell-fill"></i>
+            <span>Notifications</span>
+          </router-link>
+
+          <router-link v-if="isLandOwner" to="/help" class="sidebar-nav-item text-decoration-none" active-class="active">
+            <i class="bi bi-question-circle-fill"></i>
+            <span>Help & Support</span>
           </router-link>
         </div>
       </div>
@@ -135,7 +178,7 @@
       <!-- Mobile toggler & search -->
       <div class="d-flex align-items-center gap-3">
         <router-link 
-          to="/admindashboard" 
+          :to="dashboardRoute" 
           class="d-lg-none d-flex align-items-center gap-2 text-decoration-none"
         >
           <div class="sidebar-logo-icon" style="width: 36px; height: 36px; font-size: 1.1rem;">
@@ -277,6 +320,15 @@ export default {
     const user = computed(() => authStore.user)
     const isLandOfficer = computed(() => authStore.isLandOfficer)
     const isAdministrator = computed(() => authStore.isAdministrator)
+    const isLandOwner = computed(() => authStore.isLandOwner)
+
+    // Computed property for dashboard route based on user role
+    const dashboardRoute = computed(() => {
+      if (isAdministrator.value) return '/admindashboard'
+      if (isLandOfficer.value) return '/officer'
+      if (isLandOwner.value) return '/userdashboard'
+      return '/admindashboard' // fallback
+    })
 
     const userInitials = computed(() => {
       if (!user.value?.fullName) return 'LR'
@@ -292,19 +344,19 @@ export default {
     const fetchNotifications = async () => {
       loading.value = true
       try {
-        // Fetch from audit logs
-        const response = await api.get('/audit-logs?limit=20')
+        // Fetch only notifications for the current user
+        const response = await api.get(`/audit-logs?user=${user.value.id}&limit=20`)
         if (response.data?.data?.logs) {
           notifications.value = response.data.data.logs.map(log => ({
             _id: log._id,
             action: log.action,
-            description: log.description,
-            entityType: log.entityType,
+            description: log.description || log.details || 'System activity',
+            entityType: log.entityType || log.resourceType,
             createdAt: log.createdAt,
-            read: false // You can add a read field to your audit log model
+            read: false
           }))
           
-          // Count unread (for now, all are unread - you can enhance this)
+          // Count unread
           unreadCount.value = notifications.value.filter(n => !n.read).length
         }
       } catch (err) {
@@ -333,12 +385,16 @@ export default {
         'LOGOUT': { icon: 'bi-box-arrow-right', bgClass: 'bg-secondary text-white' },
         'USER_CREATED': { icon: 'bi-person-plus-fill', bgClass: 'bg-primary text-white' },
         'PARCEL_CREATED': { icon: 'bi-map', bgClass: 'bg-warning text-dark' },
+        'PARCEL_ASSIGNED': { icon: 'bi-gift', bgClass: 'bg-primary text-white' },
         'TRANSFER_INITIATED': { icon: 'bi-arrow-left-right', bgClass: 'bg-info text-white' },
         'TRANSFER_APPROVED': { icon: 'bi-check-circle-fill', bgClass: 'bg-success text-white' },
         'TRANSFER_REJECTED': { icon: 'bi-x-circle-fill', bgClass: 'bg-danger text-white' },
         'DOCUMENT_UPLOADED': { icon: 'bi-file-earmark-arrow-up', bgClass: 'bg-primary text-white' },
         'PASSWORD_CHANGED': { icon: 'bi-key-fill', bgClass: 'bg-warning text-dark' },
-        'PASSWORD_RESET': { icon: 'bi-shield-lock-fill', bgClass: 'bg-danger text-white' }
+        'PASSWORD_RESET': { icon: 'bi-shield-lock-fill', bgClass: 'bg-danger text-white' },
+        'SUPPORT_REQUEST': { icon: 'bi-envelope-exclamation', bgClass: 'bg-danger text-white' },
+        'SUPPORT_REQUEST_SUBMITTED': { icon: 'bi-envelope-check', bgClass: 'bg-success text-white' },
+        'PLACEHOLDER_UPGRADED': { icon: 'bi-person-check-fill', bgClass: 'bg-success text-white' }
       }
       return icons[action] || { icon: 'bi-info-circle-fill', bgClass: 'bg-light text-dark' }
     }
@@ -349,12 +405,16 @@ export default {
         'LOGOUT': 'Logout Activity',
         'USER_CREATED': 'New User Registered',
         'PARCEL_CREATED': 'New Parcel Added',
+        'PARCEL_ASSIGNED': 'Land Parcel Assigned',
         'TRANSFER_INITIATED': 'Transfer Initiated',
         'TRANSFER_APPROVED': 'Transfer Approved',
         'TRANSFER_REJECTED': 'Transfer Rejected',
         'DOCUMENT_UPLOADED': 'Document Uploaded',
         'PASSWORD_CHANGED': 'Password Changed',
-        'PASSWORD_RESET': 'Password Reset'
+        'PASSWORD_RESET': 'Password Reset',
+        'SUPPORT_REQUEST': 'Support Request Received',
+        'SUPPORT_REQUEST_SUBMITTED': 'Support Request Submitted',
+        'PLACEHOLDER_UPGRADED': 'Account Activated'
       }
       return titles[action] || 'System Activity'
     }
@@ -424,6 +484,8 @@ export default {
       userInitials,
       isLandOfficer,
       isAdministrator,
+      isLandOwner,
+      dashboardRoute,
       notifications,
       unreadCount,
       loading,

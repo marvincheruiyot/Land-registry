@@ -57,6 +57,36 @@ const routes = [
     meta: { requiresAuth: true, roles: ['Land_Owner'] }
   },
   {
+    path: '/my-parcels',
+    name: 'MyParcels',
+    component: () => import('@/views/user/MyParcels.vue'),
+    meta: { requiresAuth: true, roles: ['Land_Owner'] }
+  },
+  {
+    path: '/my-transfers',
+    name: 'MyTransfers',
+    component: () => import('@/views/user/MyTransfers.vue'),
+    meta: { requiresAuth: true, roles: ['Land_Owner'] }
+  },
+  {
+    path: '/my-documents',
+    name: 'MyDocuments',
+    component: () => import('@/views/user/MyDocuments.vue'),
+    meta: { requiresAuth: true, roles: ['Land_Owner'] }
+  },
+  {
+    path: '/help',
+    name: 'HelpSupport',
+    component: () => import('@/views/user/HelpSupport.vue'),
+    meta: { requiresAuth: true, roles: ['Land_Owner'] }
+  },
+  {
+    path: '/notifications',
+    name: 'Notifications',
+    component: () => import('@/views/user/NotificationsPage.vue'),
+    meta: { requiresAuth: true, roles: ['Land_Owner'] }
+  },
+  {
     path: '/officer',
     name: 'OfficerDashboard',
     component: () => import('@/views/officer/OfficerDashboard.vue'),
