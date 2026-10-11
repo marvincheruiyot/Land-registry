@@ -523,12 +523,19 @@ export default {
       loading.value = true
       loadingParcels.value = true
 
+      console.log('🔍 Fetching Officer Dashboard data...')
+
       try {
         // Fetch transfers
+        console.log('📊 Fetching transfers...')
         const transfersRes = await api.get('/transfers')
+        console.log('✅ Transfers response:', transfersRes.data)
+        
         if (transfersRes.data?.data?.transfers) {
           transfers.value = transfersRes.data.data.transfers
           stats.value.pendingApprovals = transfers.value.filter(t => t.status === 'pending').length
+          
+          console.log(`✅ Found ${transfers.value.length} transfers, ${stats.value.pendingApprovals} pending`)
           
           // Count completed this month
           const now = new Date()
@@ -538,19 +545,28 @@ export default {
             return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()
           })
           stats.value.completedThisMonth = thisMonth.length
+          console.log(`✅ Completed this month: ${stats.value.completedThisMonth}`)
+        } else {
+          console.warn('⚠️ No transfers found in response')
         }
 
         // Fetch parcels
-        const parcelsRes = await api.get('/land-parcels')
+        console.log('🗺️ Fetching land parcels...')
+        const parcelsRes = await api.get('/parcels')
+        console.log('✅ Parcels response:', parcelsRes.data)
+        
         if (parcelsRes.data?.data?.parcels) {
           recentParcels.value = parcelsRes.data.data.parcels
           stats.value.totalParcels = recentParcels.value.length
           stats.value.totalArea = recentParcels.value.reduce((sum, p) => sum + (parseFloat(p.sizeInAcres) || 0), 0).toFixed(2)
           
+          console.log(`✅ Found ${recentParcels.value.length} parcels, ${stats.value.totalArea} total acres`)
+          
           // Count registered by current officer
           stats.value.registeredByMe = recentParcels.value.filter(
             p => p.registeredBy === user.value.id
           ).length
+          console.log(`✅ Parcels registered by me: ${stats.value.registeredByMe}`)
 
           // Calculate county distribution (counts and acreage)
           const nairobiParcels = recentParcels.value.filter(p => p.location?.county === 'Nairobi')
@@ -572,6 +588,9 @@ export default {
             other: otherParcels.reduce((sum, p) => sum + (parseFloat(p.sizeInAcres) || 0), 0)
           }
 
+          console.log('🏘️ County distribution:', countyStats.value)
+          console.log('📐 County acreage:', countyAcres.value)
+
           // Generate recent activity from parcels
           const recentParcelActivities = recentParcels.value.slice(0, 3).map(p => ({
             title: 'New Parcel Registered',
@@ -591,6 +610,8 @@ export default {
           }))
 
           recentActivity.value = [...recentTransferActivities, ...recentParcelActivities].slice(0, 5)
+        } else {
+          console.warn('⚠️ No parcels found in response')
         }
 
         // Calculate transfer statistics
@@ -600,8 +621,12 @@ export default {
           rejected: transfers.value.filter(t => t.status === 'rejected').length,
           cancelled: transfers.value.filter(t => t.status === 'cancelled').length
         }
+        
+        console.log('📋 Transfer statistics:', transferStats.value)
+        console.log('✅ Dashboard data loaded successfully')
       } catch (err) {
-        console.error('Error loading dashboard data:', err)
+        console.error('❌ Error loading dashboard data:', err)
+        console.error('Error details:', err.response?.data || err.message)
       } finally {
         loading.value = false
         loadingParcels.value = false

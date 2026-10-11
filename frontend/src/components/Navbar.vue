@@ -289,11 +289,6 @@
                 <i class="bi bi-person me-2"></i> View Profile
               </router-link>
             </li>
-            <li>
-              <router-link to="/verify" class="dropdown-item rounded-3 py-2">
-                <i class="bi bi-patch-check me-2"></i> Verify Deed
-              </router-link>
-            </li>
             <li><hr class="dropdown-divider"></li>
             <li>
               <button @click="handleLogout" class="dropdown-item text-danger rounded-3 py-2">

@@ -611,7 +611,7 @@ export default {
       loading.value = true
       try {
         // Fetch user's parcels using the correct endpoint
-        const parcelsRes = await api.get('/land-parcels/my-parcels')
+        const parcelsRes = await api.get('/parcels/my-parcels')
         if (parcelsRes.data?.data?.parcels) {
           myParcels.value = parcelsRes.data.data.parcels
           stats.value.myParcels = myParcels.value.length

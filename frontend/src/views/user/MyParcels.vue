@@ -265,7 +265,7 @@ export default {
       loading.value = true
       try {
         // Use the correct endpoint: /my-parcels instead of /user/:id
-        const response = await api.get('/land-parcels/my-parcels')
+        const response = await api.get('/parcels/my-parcels')
         if (response.data?.data?.parcels) {
           myParcels.value = response.data.data.parcels
         }
