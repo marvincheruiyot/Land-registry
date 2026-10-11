@@ -99,6 +99,104 @@
         </div>
       </div>
 
+      <!-- Workload Distribution -->
+      <div class="dash-card mb-4">
+        <h5 class="fw-bold mb-4">
+          <i class="bi bi-pie-chart-fill me-2"></i>Workload Distribution
+        </h5>
+        
+        <div class="row g-4 mb-4">
+          <div class="col-6 col-md-3">
+            <div class="text-center p-3 bg-primary bg-opacity-10 rounded">
+              <div class="display-6 fw-bold text-primary mb-2">{{ countyStats.nairobi }}</div>
+              <small class="text-muted fw-semibold">Nairobi</small>
+              <div class="mt-2">
+                <small class="text-muted">{{ countyAcres.nairobi.toFixed(1) }} acres</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="text-center p-3 bg-success bg-opacity-10 rounded">
+              <div class="display-6 fw-bold text-success mb-2">{{ countyStats.kiambu }}</div>
+              <small class="text-muted fw-semibold">Kiambu</small>
+              <div class="mt-2">
+                <small class="text-muted">{{ countyAcres.kiambu.toFixed(1) }} acres</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="text-center p-3 bg-warning bg-opacity-10 rounded">
+              <div class="display-6 fw-bold text-warning mb-2">{{ countyStats.nakuru }}</div>
+              <small class="text-muted fw-semibold">Nakuru</small>
+              <div class="mt-2">
+                <small class="text-muted">{{ countyAcres.nakuru.toFixed(1) }} acres</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="text-center p-3 bg-info bg-opacity-10 rounded">
+              <div class="display-6 fw-bold text-info mb-2">{{ countyStats.other }}</div>
+              <small class="text-muted fw-semibold">Others</small>
+              <div class="mt-2">
+                <small class="text-muted">{{ countyAcres.other.toFixed(1) }} acres</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-3">
+          <div class="col-12">
+            <h6 class="fw-bold mb-3">
+              <i class="bi bi-graph-up me-2"></i>Transfer Status Breakdown
+            </h6>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="d-flex align-items-center gap-3 p-3 bg-light rounded">
+              <div class="avatar-circle bg-warning text-dark flex-shrink-0" style="width: 48px; height: 48px;">
+                <i class="bi bi-hourglass-split"></i>
+              </div>
+              <div>
+                <div class="display-6 fw-bold">{{ transferStats.pending }}</div>
+                <small class="text-muted">Pending</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="d-flex align-items-center gap-3 p-3 bg-light rounded">
+              <div class="avatar-circle bg-success text-white flex-shrink-0" style="width: 48px; height: 48px;">
+                <i class="bi bi-check-circle-fill"></i>
+              </div>
+              <div>
+                <div class="display-6 fw-bold">{{ transferStats.approved }}</div>
+                <small class="text-muted">Approved</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="d-flex align-items-center gap-3 p-3 bg-light rounded">
+              <div class="avatar-circle bg-danger text-white flex-shrink-0" style="width: 48px; height: 48px;">
+                <i class="bi bi-x-circle-fill"></i>
+              </div>
+              <div>
+                <div class="display-6 fw-bold">{{ transferStats.rejected }}</div>
+                <small class="text-muted">Rejected</small>
+              </div>
+            </div>
+          </div>
+          <div class="col-6 col-md-3">
+            <div class="d-flex align-items-center gap-3 p-3 bg-light rounded">
+              <div class="avatar-circle bg-secondary text-white flex-shrink-0" style="width: 48px; height: 48px;">
+                <i class="bi bi-slash-circle"></i>
+              </div>
+              <div>
+                <div class="display-6 fw-bold">{{ transferStats.cancelled }}</div>
+                <small class="text-muted">Cancelled</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Main Content Grid -->
       <div class="row g-4 mb-4">
         <!-- Pending Transfer Requests -->
@@ -295,121 +393,6 @@
       </div>
 
       <!-- Recent Activity & Parcels Grid -->
-      <div class="row g-4 mb-4">
-        <!-- Recent Activity Feed -->
-        <div class="col-12 col-lg-4">
-          <div class="dash-card h-100">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h5 class="fw-bold mb-0">
-                <i class="bi bi-clock-history me-2"></i>Recent Activity
-              </h5>
-              <button class="btn btn-sm btn-light" @click="fetchDashboardData">
-                <i class="bi bi-arrow-clockwise"></i>
-              </button>
-            </div>
-
-            <div v-if="recentActivity.length === 0" class="text-center py-4">
-              <i class="bi bi-activity fs-2 text-muted mb-2 d-block"></i>
-              <small class="text-muted">No recent activity</small>
-            </div>
-
-            <div v-else class="activity-feed">
-              <div v-for="(activity, idx) in recentActivity" :key="idx" class="activity-item d-flex gap-3 pb-3 mb-3" :class="{ 'border-bottom': idx < recentActivity.length - 1 }">
-                <div :class="['avatar-circle flex-shrink-0', activity.iconBg]" style="width: 40px; height: 40px; font-size: 0.9rem;">
-                  <i :class="['bi', activity.icon]"></i>
-                </div>
-                <div class="flex-grow-1">
-                  <div class="fw-semibold small text-dark">{{ activity.title }}</div>
-                  <small class="text-muted d-block">{{ activity.description }}</small>
-                  <small class="text-muted">
-                    <i class="bi bi-clock me-1"></i>{{ activity.time }}
-                  </small>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Workload Distribution -->
-        <div class="col-12 col-lg-8">
-          <div class="dash-card h-100">
-            <h5 class="fw-bold mb-4">
-              <i class="bi bi-pie-chart me-2"></i>Workload Distribution
-            </h5>
-            
-            <div class="row g-4">
-              <div class="col-6 col-md-3">
-                <div class="text-center p-3 bg-light rounded">
-                  <div class="display-6 fw-bold text-primary mb-2">{{ countyStats.nairobi }}</div>
-                  <small class="text-muted">Nairobi</small>
-                </div>
-              </div>
-              <div class="col-6 col-md-3">
-                <div class="text-center p-3 bg-light rounded">
-                  <div class="display-6 fw-bold text-success mb-2">{{ countyStats.kiambu }}</div>
-                  <small class="text-muted">Kiambu</small>
-                </div>
-              </div>
-              <div class="col-6 col-md-3">
-                <div class="text-center p-3 bg-light rounded">
-                  <div class="display-6 fw-bold text-warning mb-2">{{ countyStats.nakuru }}</div>
-                  <small class="text-muted">Nakuru</small>
-                </div>
-              </div>
-              <div class="col-6 col-md-3">
-                <div class="text-center p-3 bg-light rounded">
-                  <div class="display-6 fw-bold text-info mb-2">{{ countyStats.other }}</div>
-                  <small class="text-muted">Others</small>
-                </div>
-              </div>
-            </div>
-
-            <div class="mt-4 pt-3 border-top">
-              <h6 class="fw-bold mb-3">Transfer Status Breakdown</h6>
-              <div class="row g-3">
-                <div class="col-6 col-md-3">
-                  <div class="d-flex align-items-center gap-2">
-                    <div class="badge bg-warning text-dark rounded-circle" style="width: 12px; height: 12px;"></div>
-                    <div>
-                      <div class="fw-bold small">{{ transferStats.pending }}</div>
-                      <small class="text-muted">Pending</small>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-6 col-md-3">
-                  <div class="d-flex align-items-center gap-2">
-                    <div class="badge bg-success rounded-circle" style="width: 12px; height: 12px;"></div>
-                    <div>
-                      <div class="fw-bold small">{{ transferStats.approved }}</div>
-                      <small class="text-muted">Approved</small>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-6 col-md-3">
-                  <div class="d-flex align-items-center gap-2">
-                    <div class="badge bg-danger rounded-circle" style="width: 12px; height: 12px;"></div>
-                    <div>
-                      <div class="fw-bold small">{{ transferStats.rejected }}</div>
-                      <small class="text-muted">Rejected</small>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-6 col-md-3">
-                  <div class="d-flex align-items-center gap-2">
-                    <div class="badge bg-secondary rounded-circle" style="width: 12px; height: 12px;"></div>
-                    <div>
-                      <div class="fw-bold small">{{ transferStats.cancelled }}</div>
-                      <small class="text-muted">Cancelled</small>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Recent Parcels -->
       <div class="dash-card">
         <div class="d-flex justify-content-between align-items-center mb-4">
           <div>
@@ -513,6 +496,13 @@ export default {
       other: 0
     })
 
+    const countyAcres = ref({
+      nairobi: 0,
+      kiambu: 0,
+      nakuru: 0,
+      other: 0
+    })
+
     const transferStats = ref({
       pending: 0,
       approved: 0,
@@ -562,12 +552,24 @@ export default {
             p => p.registeredBy === user.value.id
           ).length
 
-          // Calculate county distribution
+          // Calculate county distribution (counts and acreage)
+          const nairobiParcels = recentParcels.value.filter(p => p.location?.county === 'Nairobi')
+          const kiambuParcels = recentParcels.value.filter(p => p.location?.county === 'Kiambu')
+          const nakuruParcels = recentParcels.value.filter(p => p.location?.county === 'Nakuru')
+          const otherParcels = recentParcels.value.filter(p => p.location?.county && !['Nairobi', 'Kiambu', 'Nakuru'].includes(p.location.county))
+
           countyStats.value = {
-            nairobi: recentParcels.value.filter(p => p.location?.county === 'Nairobi').length,
-            kiambu: recentParcels.value.filter(p => p.location?.county === 'Kiambu').length,
-            nakuru: recentParcels.value.filter(p => p.location?.county === 'Nakuru').length,
-            other: recentParcels.value.filter(p => p.location?.county && !['Nairobi', 'Kiambu', 'Nakuru'].includes(p.location.county)).length
+            nairobi: nairobiParcels.length,
+            kiambu: kiambuParcels.length,
+            nakuru: nakuruParcels.length,
+            other: otherParcels.length
+          }
+
+          countyAcres.value = {
+            nairobi: nairobiParcels.reduce((sum, p) => sum + (parseFloat(p.sizeInAcres) || 0), 0),
+            kiambu: kiambuParcels.reduce((sum, p) => sum + (parseFloat(p.sizeInAcres) || 0), 0),
+            nakuru: nakuruParcels.reduce((sum, p) => sum + (parseFloat(p.sizeInAcres) || 0), 0),
+            other: otherParcels.reduce((sum, p) => sum + (parseFloat(p.sizeInAcres) || 0), 0)
           }
 
           // Generate recent activity from parcels
@@ -660,6 +662,7 @@ export default {
       recentParcels,
       recentActivity,
       countyStats,
+      countyAcres,
       transferStats,
       filteredTransfers,
       reviewTransfer,
