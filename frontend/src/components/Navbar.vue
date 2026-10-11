@@ -1,19 +1,21 @@
 <template>
   <div>
     <!-- Left Sidebar Matching Dribbble Shot -->
-    <aside class="sidebar-wrapper d-none d-lg-flex">
+    <aside :class="['sidebar-wrapper d-none d-lg-flex', isLandOwner ? 'sidebar-land-owner' : '']">
       <div>
         <!-- Brand / Logo -->
         <router-link 
           :to="dashboardRoute" 
           class="sidebar-brand text-decoration-none"
         >
-          <div class="sidebar-logo-icon">
-            <i class="bi bi-geo-alt-fill text-warning"></i>
+          <div :class="['sidebar-logo-icon', isLandOwner ? 'bg-primary' : '']">
+            <i class="bi bi-geo-alt-fill" :class="isLandOwner ? 'text-white' : 'text-warning'"></i>
           </div>
           <div>
             <div class="fw-bold fs-5 text-dark lh-1">LandRegistry</div>
-            <small class="text-muted" style="font-size: 0.72rem; letter-spacing: 0.5px;">KENYA NATIONAL PORTAL</small>
+            <small :class="['fw-semibold', isLandOwner ? 'text-primary' : 'text-muted']" style="font-size: 0.72rem; letter-spacing: 0.5px;">
+              {{ isLandOwner ? 'MY LAND PORTAL' : 'KENYA NATIONAL PORTAL' }}
+            </small>
           </div>
         </router-link>
 
@@ -507,5 +509,218 @@ export default {
 .nav-section {
   display: flex;
   flex-direction: column;
+}
+
+/* Land Owner Sidebar Styling - White & Black Theme */
+.sidebar-land-owner {
+  background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%) !important;
+  border-right: 3px solid #212529 !important;
+  box-shadow: 2px 0 15px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-land-owner .sidebar-brand {
+  background: linear-gradient(135deg, #212529 0%, #343a40 100%);
+  padding: 1.25rem;
+  border-radius: 1rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.3);
+  border: 2px solid #495057;
+}
+
+.sidebar-land-owner .sidebar-brand .sidebar-logo-icon {
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.2);
+}
+
+.sidebar-land-owner .sidebar-brand .sidebar-logo-icon i {
+  color: #ffffff !important;
+}
+
+.sidebar-land-owner .sidebar-brand .fw-bold {
+  color: #ffffff !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  font-weight: 800 !important;
+}
+
+.sidebar-land-owner .sidebar-brand small {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.sidebar-land-owner .nav-section {
+  padding: 0 0.75rem;
+}
+
+.sidebar-land-owner .text-uppercase {
+  color: #495057 !important;
+  font-weight: 700 !important;
+  font-size: 0.7rem !important;
+  letter-spacing: 1.2px;
+}
+
+.sidebar-land-owner .sidebar-nav-item {
+  margin-bottom: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 2px solid transparent;
+  background: #ffffff;
+  color: #212529;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.sidebar-land-owner .sidebar-nav-item:hover {
+  background: linear-gradient(135deg, #212529 0%, #343a40 100%);
+  color: #ffffff !important;
+  transform: translateX(8px) scale(1.03);
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.3);
+  border-color: #495057;
+}
+
+.sidebar-land-owner .sidebar-nav-item:hover i {
+  color: #ffffff !important;
+  transform: scale(1.15) rotate(5deg);
+}
+
+.sidebar-land-owner .sidebar-nav-item.active {
+  background: linear-gradient(135deg, #212529 0%, #343a40 100%);
+  color: #ffffff !important;
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.4);
+  border-color: #495057;
+  transform: translateX(8px);
+}
+
+.sidebar-land-owner .sidebar-nav-item.active i {
+  color: #ffffff !important;
+  animation: pulse 2s infinite;
+}
+
+.sidebar-land-owner .sidebar-nav-item i {
+  transition: all 0.3s ease;
+  font-size: 1.1rem;
+  color: #212529;
+}
+
+.sidebar-land-owner .btn-pill {
+  border-radius: 50rem !important;
+  padding: 0.625rem 1.25rem;
+  font-weight: 700;
+  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.2);
+  border: 2px solid #212529;
+  background: linear-gradient(135deg, #212529 0%, #343a40 100%);
+  color: #ffffff;
+  transition: all 0.3s ease;
+}
+
+.sidebar-land-owner .btn-pill:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.3);
+  border-color: #495057;
+}
+
+.sidebar-land-owner .sidebar-user-card {
+  background: linear-gradient(135deg, #212529 0%, #343a40 100%);
+  border: 3px solid #495057;
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.3);
+  padding: 1.25rem;
+  border-radius: 1rem;
+}
+
+.sidebar-land-owner .sidebar-user-card .avatar-circle {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.2);
+  font-weight: 800;
+}
+
+.sidebar-land-owner .sidebar-user-card .fw-bold {
+  color: #ffffff !important;
+  font-size: 0.9rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  font-weight: 700;
+}
+
+.sidebar-land-owner .sidebar-user-card .text-muted {
+  color: #ffffff !important;
+  opacity: 0.9;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.sidebar-land-owner .sidebar-user-card button {
+  background: rgba(255, 255, 255, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  font-weight: 700;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1rem;
+  transition: all 0.3s ease;
+}
+
+.sidebar-land-owner .sidebar-user-card button:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.3);
+}
+
+.sidebar-land-owner .badge {
+  background: rgba(0, 0, 0, 0.15);
+  color: #212529;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+  font-weight: 700;
+  padding: 0.35rem 0.75rem;
+}
+
+/* Animation */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+/* Smooth scrollbar for Land Owner sidebar */
+.sidebar-land-owner::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-land-owner::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+}
+
+.sidebar-land-owner::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #212529 0%, #343a40 100%);
+  border-radius: 10px;
+}
+
+.sidebar-land-owner::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #343a40 0%, #495057 100%);
+}
+
+/* Glow effect for active items */
+.sidebar-land-owner .sidebar-nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: -3px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 5px;
+  height: 70%;
+  background: linear-gradient(135deg, #212529 0%, #343a40 100%);
+  border-radius: 0 4px 4px 0;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+}
+
+/* Subtle white/gray background for non-active items */
+.sidebar-land-owner .sidebar-nav-item:not(.active):not(:hover) {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
 }
 </style>
