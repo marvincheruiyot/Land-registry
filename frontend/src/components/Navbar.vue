@@ -144,17 +144,14 @@
           <span class="fw-bold text-dark">LandRegistry</span>
         </router-link>
 
-        <!-- Welcome Message -->
+        <!-- Welcome Message with Live Clock -->
         <div class="d-none d-lg-block ms-4">
-          <div class="d-flex align-items-center gap-2">
-            <span class="badge badge-pill-custom badge-soft-yellow">
-              <i class="bi bi-shield-check-fill"></i>
-              Kenya National Portal
-            </span>
-          </div>
-          <p class="text-muted small mb-0 mt-1">
-            <i class="bi bi-calendar3"></i>
-            {{ currentDate }}
+          <p class="mb-0 fw-semibold text-dark">
+            Welcome back, {{ user?.fullName || 'User' }} 👋
+          </p>
+          <p class="text-muted small mb-0">
+            <i class="bi bi-clock"></i>
+            {{ currentTime }} • {{ currentDate }}
           </p>
         </div>
       </div>
@@ -386,12 +383,24 @@ export default {
     const currentDate = computed(() => {
       const now = new Date()
       return now.toLocaleDateString('en-KE', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
       })
     })
+
+    const currentTime = ref('')
+    
+    const updateTime = () => {
+      const now = new Date()
+      currentTime.value = now.toLocaleTimeString('en-KE', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      })
+    }
 
     const handleLogout = async () => {
       await authStore.logout()
@@ -404,6 +413,10 @@ export default {
         // Refresh notifications every 30 seconds
         setInterval(fetchNotifications, 30000)
       }
+      
+      // Update time immediately and then every second
+      updateTime()
+      setInterval(updateTime, 1000)
     })
 
     return {
@@ -416,6 +429,7 @@ export default {
       loading,
       formatRole,
       currentDate,
+      currentTime,
       handleLogout,
       markAsRead,
       markAllAsRead,

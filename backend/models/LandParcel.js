@@ -24,13 +24,13 @@ const landParcelSchema = new mongoose.Schema({
     coordinates: {
       latitude: {
         type: Number,
-        required: [true, 'Latitude is required'],
+        required: false,
         min: [-4.68, 'Latitude must be within Kenya boundaries'],
         max: [5.03, 'Latitude must be within Kenya boundaries']
       },
       longitude: {
         type: Number,
-        required: [true, 'Longitude is required'],
+        required: false,
         min: [33.89, 'Longitude must be within Kenya boundaries'],
         max: [41.86, 'Longitude must be within Kenya boundaries']
       }

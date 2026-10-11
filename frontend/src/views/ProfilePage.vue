@@ -91,7 +91,8 @@
 
                 <div class="col-12">
                   <label class="form-label fw-semibold text-dark">Physical Address / County Bureau</label>
-                  <textarea v-model="profileForm.physicalAddress" class="form-control rounded-4 bg-light border-0" rows="3"></textarea>
+                  <textarea v-model="profileForm.physicalAddress" class="form-control rounded-4 bg-light border-0" rows="3" placeholder="Optional - Enter your physical address or county bureau location"></textarea>
+                  <small class="text-muted">Optional field</small>
                 </div>
               </div>
 
@@ -240,14 +241,25 @@ export default {
       updating.value = true
       updateMessage.value = null
       try {
-        await api.put('/users/profile', profileForm.value)
+        const response = await api.put('/users/profile', profileForm.value)
+        
+        // Update the auth store with new user data
+        if (response.data?.data?.user) {
+          authStore.user = response.data.data.user
+          localStorage.setItem('user', JSON.stringify(response.data.data.user))
+        }
+        
         updateSuccess.value = true
-        updateMessage.value = 'Profile information saved successfully.'
+        updateMessage.value = 'Profile information saved successfully!'
       } catch (err) {
-        updateSuccess.value = true
-        updateMessage.value = 'Profile updated successfully.'
+        updateSuccess.value = false
+        updateMessage.value = err.response?.data?.message || 'Failed to update profile. Please try again.'
       } finally {
         updating.value = false
+        // Clear message after 3 seconds
+        setTimeout(() => {
+          updateMessage.value = null
+        }, 3000)
       }
     }
 

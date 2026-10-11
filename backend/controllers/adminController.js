@@ -317,6 +317,7 @@ exports.createParcel = async (req, res, next) => {
     const {
       parcelNumber,
       title,
+      titleDeedNumber,
       county,
       subCounty,
       ward,
@@ -324,7 +325,8 @@ exports.createParcel = async (req, res, next) => {
       latitude,
       longitude,
       sizeInAcres,
-      currentOwnerId,
+      ownerNationalId,
+      ownerName,
       landUse,
       boundaries,
       notes
@@ -339,36 +341,56 @@ exports.createParcel = async (req, res, next) => {
       });
     }
 
-    // Verify owner exists
-    const owner = await User.findById(currentOwnerId);
+    // Find owner by National ID
+    let owner = await User.findOne({ nationalId: ownerNationalId });
+    
+    // If owner doesn't exist, create a placeholder owner account
     if (!owner) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'Owner not found'
+      owner = await User.create({
+        fullName: ownerName || `Owner-${ownerNationalId}`,
+        email: `${ownerNationalId}@pending.landregistry.go.ke`,
+        phoneNumber: '+254700000000',
+        nationalId: ownerNationalId,
+        password: `TempPass${ownerNationalId}@123`,
+        role: 'Land_Owner',
+        isActive: false, // Inactive until they complete registration
+        isPlaceholder: true, // Mark as placeholder
+        createdBy: req.user._id
+      });
+
+      // Create audit log for placeholder user creation
+      await AuditLog.create({
+        user: req.user._id,
+        action: 'CREATE_PLACEHOLDER_USER',
+        resourceType: 'User',
+        resourceId: owner._id,
+        details: `Created placeholder owner for National ID: ${ownerNationalId}`,
+        ipAddress: req.ip
       });
     }
 
     const parcel = await LandParcel.create({
       parcelNumber,
       title,
+      titleDeedNumber,
       location: {
         county,
         subCounty,
         ward,
         description: locationDescription,
-        coordinates: {
+        coordinates: latitude && longitude ? {
           latitude: parseFloat(latitude),
           longitude: parseFloat(longitude)
-        }
+        } : undefined
       },
       sizeInAcres: parseFloat(sizeInAcres),
-      currentOwner: currentOwnerId,
+      currentOwner: owner._id,
       landUse,
       boundaries,
       notes,
       registeredBy: req.user._id,
       ownershipHistory: [{
-        owner: currentOwnerId,
+        owner: owner._id,
         acquiredDate: new Date(),
         transferMethod: 'initial_registration'
       }]
@@ -380,7 +402,7 @@ exports.createParcel = async (req, res, next) => {
       action: 'CREATE_PARCEL',
       resourceType: 'LandParcel',
       resourceId: parcel._id,
-      details: `Registered new land parcel: ${parcelNumber}`,
+      details: `Registered new land parcel: ${parcelNumber} for National ID: ${ownerNationalId}`,
       ipAddress: req.ip
     });
 
@@ -390,7 +412,10 @@ exports.createParcel = async (req, res, next) => {
 
     res.status(201).json({
       status: 'success',
-      data: { parcel: populatedParcel }
+      data: { parcel: populatedParcel },
+      message: owner.isPlaceholder 
+        ? `Parcel registered. Owner will see this parcel when they register with National ID: ${ownerNationalId}`
+        : 'Parcel registered successfully'
     });
   } catch (error) {
     next(error);

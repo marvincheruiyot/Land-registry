@@ -586,14 +586,21 @@
                         </select>
                       </div>
                       
+                      <div class="col-12"><h6 class="mt-2">Owner Information</h6></div>
                       <div class="col-12">
-                        <label class="form-label">Current Owner *</label>
-                        <select v-model="newParcelForm.currentOwnerId" class="form-select" required>
-                          <option value="">Select Owner</option>
-                          <option v-for="user in usersList" :key="user.id" :value="user.id">
-                            {{ user.name }} - {{ user.nationalId }}
-                          </option>
-                        </select>
+                        <label class="form-label">Owner's National ID *</label>
+                        <input v-model="newParcelForm.ownerNationalId" type="text" class="form-control" placeholder="Enter owner's National ID" required>
+                        <small class="text-muted">The parcel will be automatically assigned to the owner with this National ID when they register</small>
+                      </div>
+                      
+                      <div class="col-12">
+                        <label class="form-label">Owner's Full Name</label>
+                        <input v-model="newParcelForm.ownerName" type="text" class="form-control" placeholder="Optional - Owner's full name">
+                      </div>
+                      
+                      <div class="col-12">
+                        <label class="form-label">Title Deed Number *</label>
+                        <input v-model="newParcelForm.titleDeedNumber" type="text" class="form-control" placeholder="e.g., DEED/NAI/2024/001" required>
                       </div>
                       
                       <div class="col-12"><h6 class="mt-2">Boundaries</h6></div>
@@ -931,7 +938,9 @@ export default {
       latitude: -1.2921,
       longitude: 36.8219,
       sizeInAcres: '',
-      currentOwnerId: '',
+      ownerNationalId: '',
+      ownerName: '',
+      titleDeedNumber: '',
       landUse: 'residential',
       boundaries: { north: '', south: '', east: '', west: '' },
       notes: ''
@@ -1112,7 +1121,9 @@ export default {
         latitude: -1.2921,
         longitude: 36.8219,
         sizeInAcres: '',
-        currentOwnerId: '',
+        ownerNationalId: '',
+        ownerName: '',
+        titleDeedNumber: '',
         landUse: 'residential',
         boundaries: { north: '', south: '', east: '', west: '' },
         notes: ''

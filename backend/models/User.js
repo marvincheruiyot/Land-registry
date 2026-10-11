@@ -50,6 +50,10 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  isPlaceholder: {
+    type: Boolean,
+    default: false
+  },
   emailVerificationToken: String,
   passwordResetToken: String,
   passwordResetExpires: Date,
