@@ -3,59 +3,13 @@
     <Navbar />
 
     <main class="flex-grow-1 p-3 p-md-4 p-xl-5">
-      <!-- Top Bar with Search, Actions, Notification & Profile -->
-      <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-3 mb-4 pb-3 border-bottom">
-        <!-- Search Bar -->
-        <div class="position-relative flex-grow-1" style="max-width: 450px;">
-          <i class="bi bi-search position-absolute text-muted" style="left: 1rem; top: 50%; transform: translateY(-50%);"></i>
-          <input
-            type="search"
-            class="form-control rounded-pill ps-5 py-2 bg-light border-0"
-            placeholder="Search parcels, owners, IDs..."
-            v-model="searchQuery"
-            @keyup.enter="performSearch"
-          />
-        </div>
-
-        <!-- Action Buttons + Notification + Profile -->
-        <div class="d-flex align-items-center gap-2">
-          <button @click="showNewParcelModal = true" class="btn btn-pill btn-warning text-dark d-flex align-items-center gap-2 px-4">
-            <i class="bi bi-plus-circle"></i> New Parcel
-          </button>
-          <button @click="showNewTransferModal = true" class="btn btn-pill btn-dark-pill d-flex align-items-center gap-2 px-4">
-            <i class="bi bi-arrow-left-right"></i> Transfer
-          </button>
-          
-          <!-- Notification Bell -->
-          <button class="btn btn-light-pill rounded-circle p-2 position-relative" style="width: 42px; height: 42px;">
-            <i class="bi bi-bell fs-6"></i>
-            <span v-if="notifications.length > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">
-              {{ notifications.length }}
-            </span>
-          </button>
-
-          <!-- Profile Dropdown -->
-          <div class="dropdown">
-            <button class="btn btn-light-pill rounded-circle p-0 d-flex align-items-center justify-content-center" style="width: 42px; height: 42px;" data-bs-toggle="dropdown">
-              <span class="fw-bold text-dark">{{ user?.fullName?.charAt(0) || 'O' }}</span>
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2">
-              <li><router-link class="dropdown-item" to="/profile"><i class="bi bi-person me-2"></i>Profile</router-link></li>
-              <li><router-link class="dropdown-item" to="/settings"><i class="bi bi-gear me-2"></i>Settings</router-link></li>
-              <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item text-danger" href="#" @click.prevent="handleLogout"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
       <!-- Title & Welcome Header -->
       <div class="mb-4">
         <span class="badge badge-pill-custom badge-soft-blue mb-2">
-          <i class="bi bi-briefcase"></i> Land Officer Portal
+          <i class="bi bi-briefcase-fill"></i> Land Officer Portal
         </span>
-        <h1 class="fw-bold text-dark fs-2 mb-1">Officer Dashboard</h1>
-        <p class="text-muted mb-0">Welcome back, {{ user?.fullName || 'Officer' }}. Manage parcels, transfers, and verifications.</p>
+        <h1 class="fw-bold text-dark fs-2 mb-1">Welcome back, {{ user?.fullName || 'Officer' }}</h1>
+        <p class="text-muted mb-0">Manage parcels, process transfers, and verify land records efficiently.</p>
       </div>
 
       <!-- Statistics Cards -->
@@ -68,15 +22,15 @@
                 <i class="bi bi-hourglass-split fs-5"></i>
               </div>
               <span class="badge bg-dark text-white rounded-pill px-3 py-1">
-                Pending
+                Action Required
               </span>
             </div>
             <div>
               <div class="display-5 fw-bold mb-1 lh-1">{{ stats.pendingApprovals }}</div>
-              <div class="text-dark small fw-medium">Awaiting Approval</div>
+              <div class="text-dark small fw-medium">Pending Approvals</div>
             </div>
             <div class="mt-4 pt-3 border-top border-dark border-opacity-10">
-              <small class="text-dark">Transfers & Registrations</small>
+              <small class="text-dark">Transfers awaiting review</small>
             </div>
           </div>
         </div>
@@ -86,35 +40,35 @@
           <div class="dash-card h-100">
             <div class="d-flex justify-content-between align-items-start mb-3">
               <div class="avatar-circle bg-light text-primary">
-                <i class="bi bi-map fs-5"></i>
+                <i class="bi bi-map-fill fs-5"></i>
               </div>
               <span class="badge badge-pill-custom badge-soft-blue">
-                Active
+                Registered
               </span>
             </div>
             <div>
               <div class="display-5 fw-bold mb-1 lh-1">{{ stats.totalParcels }}</div>
-              <div class="text-muted small fw-medium">Registered Parcels</div>
+              <div class="text-muted small fw-medium">Total Parcels</div>
             </div>
             <div class="mt-4 pt-3 border-top">
-              <small class="text-muted">Under your jurisdiction</small>
+              <small class="text-muted">{{ stats.totalArea }} acres total</small>
             </div>
           </div>
         </div>
 
-        <!-- Completed Today -->
+        <!-- Completed This Month -->
         <div class="col-12 col-md-6 col-xl-3">
           <div class="dash-card h-100">
             <div class="d-flex justify-content-between align-items-start mb-3">
               <div class="avatar-circle bg-light text-success">
-                <i class="bi bi-check-circle fs-5"></i>
+                <i class="bi bi-check-circle-fill fs-5"></i>
               </div>
               <span class="badge badge-pill-custom badge-soft-green">
-                Today
+                This Month
               </span>
             </div>
             <div>
-              <div class="display-5 fw-bold mb-1 lh-1">{{ stats.completedToday }}</div>
+              <div class="display-5 fw-bold mb-1 lh-1">{{ stats.completedThisMonth }}</div>
               <div class="text-muted small fw-medium">Completed Tasks</div>
             </div>
             <div class="mt-4 pt-3 border-top">
@@ -123,23 +77,23 @@
           </div>
         </div>
 
-        <!-- Verifications -->
+        <!-- Registrations by Me -->
         <div class="col-12 col-md-6 col-xl-3">
           <div class="dash-card card-dark h-100">
             <div class="d-flex justify-content-between align-items-start mb-3">
               <div class="avatar-circle bg-dark-subtle text-white">
-                <i class="bi bi-shield-check fs-5"></i>
+                <i class="bi bi-person-badge-fill fs-5"></i>
               </div>
               <span class="badge bg-secondary-subtle text-light rounded-pill px-3 py-1">
-                Verified
+                Your Work
               </span>
             </div>
             <div>
-              <div class="display-5 fw-bold mb-1 lh-1">{{ stats.verifications }}</div>
-              <div class="text-secondary small fw-medium">Documents Verified</div>
+              <div class="display-5 fw-bold mb-1 lh-1">{{ stats.registeredByMe }}</div>
+              <div class="text-secondary small fw-medium">Parcels Registered</div>
             </div>
             <div class="mt-4 pt-3 border-top border-secondary border-opacity-25">
-              <small class="text-secondary">This month</small>
+              <small class="text-secondary">By you total</small>
             </div>
           </div>
         </div>
@@ -147,157 +101,307 @@
 
       <!-- Main Content Grid -->
       <div class="row g-4 mb-4">
-        <!-- Pending Transfers List -->
-        <div class="col-12 col-lg-8">
+        <!-- Pending Transfer Requests -->
+        <div class="col-12 col-xl-8">
           <div class="dash-card h-100">
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-4">
               <div>
-                <h5 class="fw-bold mb-0">Pending Transfer Requests</h5>
+                <h5 class="fw-bold mb-1">Transfer Requests</h5>
                 <small class="text-muted">Review and approve ownership transfers</small>
               </div>
-              <div class="btn-group">
+              <div class="btn-group btn-group-sm">
                 <button 
-                  :class="['btn btn-sm', transferFilter === 'all' ? 'btn-dark' : 'btn-light']"
-                  @click="transferFilter = 'all'"
-                >
-                  All
-                </button>
-                <button 
-                  :class="['btn btn-sm', transferFilter === 'pending' ? 'btn-warning' : 'btn-light']"
+                  :class="['btn', transferFilter === 'pending' ? 'btn-warning text-dark' : 'btn-outline-secondary']"
                   @click="transferFilter = 'pending'"
                 >
-                  Pending
+                  <i class="bi bi-hourglass me-1"></i>Pending
                 </button>
                 <button 
-                  :class="['btn btn-sm', transferFilter === 'review' ? 'btn-info' : 'btn-light']"
-                  @click="transferFilter = 'review'"
+                  :class="['btn', transferFilter === 'all' ? 'btn-dark' : 'btn-outline-secondary']"
+                  @click="transferFilter = 'all'"
                 >
-                  In Review
+                  <i class="bi bi-list me-1"></i>All
                 </button>
               </div>
             </div>
 
             <div v-if="loading" class="text-center py-5">
-              <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-              </div>
+              <div class="spinner-border text-primary" role="status"></div>
+              <p class="text-muted mt-2 small">Loading transfers...</p>
             </div>
 
             <div v-else-if="filteredTransfers.length === 0" class="text-center py-5">
               <i class="bi bi-inbox fs-1 text-muted mb-3 d-block"></i>
-              <p class="text-muted">No transfers found</p>
+              <h6 class="fw-bold text-dark mb-2">No Transfer Requests</h6>
+              <p class="text-muted small mb-0">All transfers have been processed</p>
             </div>
 
             <div v-else class="table-responsive">
               <table class="table table-hover align-middle mb-0">
-                <thead class="text-muted small">
-                  <tr>
-                    <th class="border-0 pb-3">PARCEL</th>
-                    <th class="border-0 pb-3">FROM / TO</th>
-                    <th class="border-0 pb-3">SUBMITTED</th>
-                    <th class="border-0 pb-3">STATUS</th>
-                    <th class="border-0 pb-3 text-end">ACTION</th>
+                <thead>
+                  <tr style="border-bottom: 2px solid #e5e7eb;">
+                    <th class="py-3 text-muted fw-semibold text-uppercase" style="font-size: 0.75rem;">Parcel</th>
+                    <th class="py-3 text-muted fw-semibold text-uppercase" style="font-size: 0.75rem;">From → To</th>
+                    <th class="py-3 text-muted fw-semibold text-uppercase" style="font-size: 0.75rem;">Type</th>
+                    <th class="py-3 text-muted fw-semibold text-uppercase" style="font-size: 0.75rem;">Date</th>
+                    <th class="py-3 text-muted fw-semibold text-uppercase" style="font-size: 0.75rem;">Status</th>
+                    <th class="py-3 text-muted fw-semibold text-uppercase text-end" style="font-size: 0.75rem;">Action</th>
                   </tr>
                 </thead>
-                <tbody class="border-top-0">
-                  <tr v-for="transfer in filteredTransfers" :key="transfer._id">
-                    <td>
-                      <div class="d-flex align-items-center gap-2">
-                        <div class="avatar-circle bg-light text-dark" style="width: 32px; height: 32px;">
-                          <i class="bi bi-geo-alt"></i>
-                        </div>
-                        <div>
-                          <div class="fw-bold text-dark small">{{ transfer.landParcel?.parcelNumber || 'N/A' }}</div>
-                          <small class="text-muted">{{ transfer.landParcel?.location?.county || 'Unknown' }}</small>
-                        </div>
+                <tbody>
+                  <tr v-for="transfer in filteredTransfers.slice(0, 10)" :key="transfer._id" style="border-bottom: 1px solid #f3f4f6;">
+                    <td class="py-3">
+                      <div class="fw-semibold" style="font-size: 0.9rem;">{{ transfer.landParcel?.parcelNumber || 'N/A' }}</div>
+                      <small class="text-muted">{{ transfer.landParcel?.location?.county }}</small>
+                    </td>
+                    <td class="py-3">
+                      <div style="font-size: 0.85rem;">
+                        <div class="text-truncate" style="max-width: 150px;">{{ transfer.currentOwner?.fullName || 'Unknown' }}</div>
+                        <div class="text-muted">→ {{ transfer.newOwner?.fullName || 'Unknown' }}</div>
                       </div>
                     </td>
-                    <td>
-                      <div class="small">
-                        <div class="text-muted">From: <span class="fw-semibold text-dark">{{ transfer.currentOwner?.fullName || 'N/A' }}</span></div>
-                        <div class="text-muted">To: <span class="fw-semibold text-dark">{{ transfer.newOwner?.fullName || 'N/A' }}</span></div>
-                      </div>
+                    <td class="py-3">
+                      <span class="badge bg-light text-dark px-2 py-1" style="font-size: 0.75rem;">
+                        {{ transfer.transferType || 'Sale' }}
+                      </span>
                     </td>
-                    <td>
+                    <td class="py-3">
                       <small class="text-muted">{{ formatDate(transfer.createdAt) }}</small>
                     </td>
-                    <td>
-                      <span :class="['badge badge-pill-custom', getStatusClass(transfer.status)]">
+                    <td class="py-3">
+                      <span :class="['badge rounded-pill px-3 py-1', getStatusBadgeClass(transfer.status)]" style="font-size: 0.75rem;">
                         {{ transfer.status }}
                       </span>
                     </td>
-                    <td class="text-end">
-                      <button @click="reviewTransfer(transfer)" class="btn btn-sm btn-primary me-2">
-                        <i class="bi bi-eye"></i> Review
+                    <td class="py-3 text-end">
+                      <button @click="reviewTransfer(transfer)" class="btn btn-sm btn-dark px-3">
+                        <i class="bi bi-eye me-1"></i>Review
                       </button>
                     </td>
                   </tr>
                 </tbody>
               </table>
             </div>
+
+            <div v-if="filteredTransfers.length > 10" class="text-center pt-3 mt-3 border-top">
+              <router-link to="/transfers" class="btn btn-sm btn-light">
+                View All {{ filteredTransfers.length }} Transfers
+              </router-link>
+            </div>
           </div>
         </div>
 
-        <!-- Quick Actions & Recent Activity -->
-        <div class="col-12 col-lg-4">
-          <!-- Quick Actions -->
-          <div class="dash-card mb-4">
-            <h5 class="fw-bold mb-3">Quick Actions</h5>
-            <div class="d-grid gap-2">
-              <button @click="showNewParcelModal = true" class="btn btn-light-pill text-start d-flex align-items-center gap-3 py-3">
-                <div class="avatar-circle bg-warning text-dark">
-                  <i class="bi bi-plus-circle"></i>
+        <!-- Quick Actions -->
+        <div class="col-12 col-xl-4">
+          <div class="dash-card h-100">
+            <h5 class="fw-bold mb-4">Quick Actions</h5>
+            <div class="d-grid gap-3">
+              <router-link to="/parcels/create" class="btn btn-warning text-dark text-decoration-none d-flex align-items-center gap-3 py-3">
+                <div class="avatar-circle bg-dark text-warning flex-shrink-0">
+                  <i class="bi bi-plus-circle-fill"></i>
+                </div>
+                <div class="text-start">
+                  <div class="fw-bold small">Register New Parcel</div>
+                  <small>Add land to registry</small>
+                </div>
+              </router-link>
+
+              <router-link to="/verify" class="btn btn-light-pill text-start d-flex align-items-center gap-3 py-3 border text-decoration-none">
+                <div class="avatar-circle bg-primary text-white flex-shrink-0">
+                  <i class="bi bi-shield-check-fill"></i>
                 </div>
                 <div>
-                  <div class="fw-bold text-dark">Register New Parcel</div>
-                  <small class="text-muted">Add new land to registry</small>
+                  <div class="fw-bold text-dark small">Verify Document</div>
+                  <small class="text-muted">Authenticate title deed</small>
                 </div>
-              </button>
+              </router-link>
 
-              <button @click="showVerifyModal = true" class="btn btn-light-pill text-start d-flex align-items-center gap-3 py-3">
-                <div class="avatar-circle bg-primary text-white">
-                  <i class="bi bi-shield-check"></i>
-                </div>
-                <div>
-                  <div class="fw-bold text-dark">Verify Document</div>
-                  <small class="text-muted">Authenticate deed</small>
-                </div>
-              </button>
-
-              <router-link to="/parcels" class="btn btn-light-pill text-start d-flex align-items-center gap-3 py-3 text-decoration-none">
-                <div class="avatar-circle bg-dark text-white">
+              <router-link to="/parcels" class="btn btn-light-pill text-start d-flex align-items-center gap-3 py-3 border text-decoration-none">
+                <div class="avatar-circle bg-dark text-white flex-shrink-0">
                   <i class="bi bi-search"></i>
                 </div>
                 <div>
-                  <div class="fw-bold text-dark">Search Registry</div>
+                  <div class="fw-bold text-dark small">Search Registry</div>
                   <small class="text-muted">Browse all parcels</small>
                 </div>
               </router-link>
 
-              <router-link to="/reports" class="btn btn-light-pill text-start d-flex align-items-center gap-3 py-3 text-decoration-none">
-                <div class="avatar-circle bg-success text-white">
-                  <i class="bi bi-file-earmark-bar-graph"></i>
+              <router-link to="/transfers" class="btn btn-light-pill text-start d-flex align-items-center gap-3 py-3 border text-decoration-none">
+                <div class="avatar-circle bg-info text-white flex-shrink-0">
+                  <i class="bi bi-arrow-left-right"></i>
                 </div>
                 <div>
-                  <div class="fw-bold text-dark">Generate Report</div>
+                  <div class="fw-bold text-dark small">View All Transfers</div>
+                  <small class="text-muted">Manage transfers</small>
+                </div>
+              </router-link>
+
+              <router-link to="/reports" class="btn btn-light-pill text-start d-flex align-items-center gap-3 py-3 border text-decoration-none">
+                <div class="avatar-circle bg-success text-white flex-shrink-0">
+                  <i class="bi bi-file-earmark-bar-graph-fill"></i>
+                </div>
+                <div>
+                  <div class="fw-bold text-dark small">Generate Reports</div>
                   <small class="text-muted">Export statistics</small>
                 </div>
               </router-link>
+
+              <router-link to="/settings" class="btn btn-light-pill text-start d-flex align-items-center gap-3 py-3 border text-decoration-none">
+                <div class="avatar-circle bg-secondary text-white flex-shrink-0">
+                  <i class="bi bi-gear-fill"></i>
+                </div>
+                <div>
+                  <div class="fw-bold text-dark small">Officer Settings</div>
+                  <small class="text-muted">Preferences & config</small>
+                </div>
+              </router-link>
+            </div>
+
+            <!-- Performance Metrics -->
+            <div class="mt-4 pt-4 border-top">
+              <h6 class="fw-bold mb-3">
+                <i class="bi bi-graph-up me-2"></i>My Performance
+              </h6>
+              <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <small class="text-muted">Parcels Registered</small>
+                  <small class="fw-bold">{{ stats.registeredByMe }}</small>
+                </div>
+                <div class="progress" style="height: 6px;">
+                  <div class="progress-bar bg-primary" :style="{ width: `${Math.min((stats.registeredByMe / 50) * 100, 100)}%` }"></div>
+                </div>
+              </div>
+              <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <small class="text-muted">Transfers Approved</small>
+                  <small class="fw-bold">{{ stats.completedThisMonth }}</small>
+                </div>
+                <div class="progress" style="height: 6px;">
+                  <div class="progress-bar bg-success" :style="{ width: `${Math.min((stats.completedThisMonth / 30) * 100, 100)}%` }"></div>
+                </div>
+              </div>
+              <div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <small class="text-muted">Pending Reviews</small>
+                  <small class="fw-bold text-warning">{{ stats.pendingApprovals }}</small>
+                </div>
+                <div class="progress" style="height: 6px;">
+                  <div class="progress-bar bg-warning" :style="{ width: `${Math.min((stats.pendingApprovals / 20) * 100, 100)}%` }"></div>
+                </div>
+              </div>
             </div>
           </div>
+        </div>
+      </div>
 
-          <!-- Recent Activity -->
-          <div class="dash-card">
-            <h5 class="fw-bold mb-3">Recent Activity</h5>
-            <div class="activity-list">
-              <div v-for="(activity, idx) in recentActivity" :key="idx" class="activity-item d-flex gap-3 pb-3 mb-3 border-bottom">
-                <div :class="['avatar-circle', activity.iconBg]" style="width: 36px; height: 36px;">
+      <!-- Recent Activity & Parcels Grid -->
+      <div class="row g-4 mb-4">
+        <!-- Recent Activity Feed -->
+        <div class="col-12 col-lg-4">
+          <div class="dash-card h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h5 class="fw-bold mb-0">
+                <i class="bi bi-clock-history me-2"></i>Recent Activity
+              </h5>
+              <button class="btn btn-sm btn-light" @click="fetchDashboardData">
+                <i class="bi bi-arrow-clockwise"></i>
+              </button>
+            </div>
+
+            <div v-if="recentActivity.length === 0" class="text-center py-4">
+              <i class="bi bi-activity fs-2 text-muted mb-2 d-block"></i>
+              <small class="text-muted">No recent activity</small>
+            </div>
+
+            <div v-else class="activity-feed">
+              <div v-for="(activity, idx) in recentActivity" :key="idx" class="activity-item d-flex gap-3 pb-3 mb-3" :class="{ 'border-bottom': idx < recentActivity.length - 1 }">
+                <div :class="['avatar-circle flex-shrink-0', activity.iconBg]" style="width: 40px; height: 40px; font-size: 0.9rem;">
                   <i :class="['bi', activity.icon]"></i>
                 </div>
                 <div class="flex-grow-1">
-                  <div class="small fw-semibold text-dark">{{ activity.title }}</div>
+                  <div class="fw-semibold small text-dark">{{ activity.title }}</div>
                   <small class="text-muted d-block">{{ activity.description }}</small>
-                  <small class="text-muted">{{ activity.time }}</small>
+                  <small class="text-muted">
+                    <i class="bi bi-clock me-1"></i>{{ activity.time }}
+                  </small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Workload Distribution -->
+        <div class="col-12 col-lg-8">
+          <div class="dash-card h-100">
+            <h5 class="fw-bold mb-4">
+              <i class="bi bi-pie-chart me-2"></i>Workload Distribution
+            </h5>
+            
+            <div class="row g-4">
+              <div class="col-6 col-md-3">
+                <div class="text-center p-3 bg-light rounded">
+                  <div class="display-6 fw-bold text-primary mb-2">{{ countyStats.nairobi }}</div>
+                  <small class="text-muted">Nairobi</small>
+                </div>
+              </div>
+              <div class="col-6 col-md-3">
+                <div class="text-center p-3 bg-light rounded">
+                  <div class="display-6 fw-bold text-success mb-2">{{ countyStats.kiambu }}</div>
+                  <small class="text-muted">Kiambu</small>
+                </div>
+              </div>
+              <div class="col-6 col-md-3">
+                <div class="text-center p-3 bg-light rounded">
+                  <div class="display-6 fw-bold text-warning mb-2">{{ countyStats.nakuru }}</div>
+                  <small class="text-muted">Nakuru</small>
+                </div>
+              </div>
+              <div class="col-6 col-md-3">
+                <div class="text-center p-3 bg-light rounded">
+                  <div class="display-6 fw-bold text-info mb-2">{{ countyStats.other }}</div>
+                  <small class="text-muted">Others</small>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-top">
+              <h6 class="fw-bold mb-3">Transfer Status Breakdown</h6>
+              <div class="row g-3">
+                <div class="col-6 col-md-3">
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="badge bg-warning text-dark rounded-circle" style="width: 12px; height: 12px;"></div>
+                    <div>
+                      <div class="fw-bold small">{{ transferStats.pending }}</div>
+                      <small class="text-muted">Pending</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6 col-md-3">
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="badge bg-success rounded-circle" style="width: 12px; height: 12px;"></div>
+                    <div>
+                      <div class="fw-bold small">{{ transferStats.approved }}</div>
+                      <small class="text-muted">Approved</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6 col-md-3">
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="badge bg-danger rounded-circle" style="width: 12px; height: 12px;"></div>
+                    <div>
+                      <div class="fw-bold small">{{ transferStats.rejected }}</div>
+                      <small class="text-muted">Rejected</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-6 col-md-3">
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="badge bg-secondary rounded-circle" style="width: 12px; height: 12px;"></div>
+                    <div>
+                      <div class="fw-bold small">{{ transferStats.cancelled }}</div>
+                      <small class="text-muted">Cancelled</small>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -307,57 +411,57 @@
 
       <!-- Recent Parcels -->
       <div class="dash-card">
-        <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-4">
           <div>
-            <h5 class="fw-bold mb-0">Recently Registered Parcels</h5>
-            <small class="text-muted">Latest additions to the registry</small>
+            <h5 class="fw-bold mb-1">Recently Registered Parcels</h5>
+            <small class="text-muted">Latest additions to the land registry</small>
           </div>
-          <router-link to="/parcels" class="btn btn-sm btn-light-pill">
-            View All
+          <router-link to="/parcels" class="btn btn-sm btn-dark">
+            <i class="bi bi-grid-fill me-1"></i>View All Parcels
           </router-link>
         </div>
 
-        <div v-if="recentParcels.length === 0" class="text-center py-5">
+        <div v-if="loadingParcels" class="text-center py-5">
+          <div class="spinner-border text-primary" role="status"></div>
+        </div>
+
+        <div v-else-if="recentParcels.length === 0" class="text-center py-5">
           <i class="bi bi-inbox fs-1 text-muted mb-3 d-block"></i>
-          <p class="text-muted">No parcels found</p>
+          <p class="text-muted">No parcels registered yet</p>
         </div>
 
         <div v-else class="table-responsive">
           <table class="table table-hover align-middle mb-0">
-            <thead class="text-muted small">
-              <tr>
-                <th class="border-0 pb-3">PARCEL NUMBER</th>
-                <th class="border-0 pb-3">OWNER</th>
-                <th class="border-0 pb-3">LOCATION</th>
-                <th class="border-0 pb-3">SIZE</th>
-                <th class="border-0 pb-3">REGISTERED</th>
-                <th class="border-0 pb-3 text-end">ACTION</th>
+            <thead>
+              <tr style="border-bottom: 2px solid #e5e7eb;">
+                <th class="py-3 text-muted fw-semibold text-uppercase" style="font-size: 0.75rem;">Parcel Number</th>
+                <th class="py-3 text-muted fw-semibold text-uppercase" style="font-size: 0.75rem;">Owner</th>
+                <th class="py-3 text-muted fw-semibold text-uppercase" style="font-size: 0.75rem;">Location</th>
+                <th class="py-3 text-muted fw-semibold text-uppercase" style="font-size: 0.75rem;">Size</th>
+                <th class="py-3 text-muted fw-semibold text-uppercase" style="font-size: 0.75rem;">Land Use</th>
+                <th class="py-3 text-muted fw-semibold text-uppercase" style="font-size: 0.75rem;">Registered</th>
               </tr>
             </thead>
-            <tbody class="border-top-0">
-              <tr v-for="parcel in recentParcels" :key="parcel._id">
-                <td>
-                  <div class="fw-bold text-dark small">{{ parcel.parcelNumber }}</div>
+            <tbody>
+              <tr v-for="parcel in recentParcels.slice(0, 8)" :key="parcel._id" style="border-bottom: 1px solid #f3f4f6;">
+                <td class="py-3">
+                  <div class="fw-semibold" style="font-size: 0.9rem;">{{ parcel.parcelNumber }}</div>
                 </td>
-                <td>
-                  <div class="small fw-semibold text-dark">{{ parcel.owner?.fullName || 'N/A' }}</div>
-                  <small class="text-muted">ID: {{ parcel.owner?.nationalId || 'N/A' }}</small>
+                <td class="py-3">
+                  <div style="font-size: 0.85rem;">{{ parcel.currentOwner?.fullName || 'N/A' }}</div>
+                  <small class="text-muted">ID: {{ parcel.currentOwner?.nationalId }}</small>
                 </td>
-                <td>
-                  <span class="badge bg-light text-dark rounded-pill px-2 py-1 small">
-                    {{ parcel.location?.county || 'Unknown' }}
-                  </span>
+                <td class="py-3">
+                  <span class="badge bg-light text-dark px-2 py-1">{{ parcel.location?.county }}</span>
                 </td>
-                <td>
-                  <small class="text-muted">{{ parcel.size?.value || 'N/A' }} {{ parcel.size?.unit || '' }}</small>
+                <td class="py-3">
+                  <span style="font-size: 0.85rem;">{{ parcel.sizeInAcres }} acres</span>
                 </td>
-                <td>
+                <td class="py-3">
+                  <span class="text-capitalize" style="font-size: 0.85rem;">{{ parcel.landUse }}</span>
+                </td>
+                <td class="py-3">
                   <small class="text-muted">{{ formatDate(parcel.createdAt) }}</small>
-                </td>
-                <td class="text-end">
-                  <button class="btn btn-sm btn-light-pill rounded-circle p-2" title="View Details">
-                    <i class="bi bi-arrow-up-right"></i>
-                  </button>
                 </td>
               </tr>
             </tbody>
@@ -365,258 +469,6 @@
         </div>
       </div>
     </main>
-
-    <!-- New Parcel Modal -->
-    <div v-if="showNewParcelModal" class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
-      <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg">
-          <div class="modal-header border-0 pb-0">
-            <div>
-              <h5 class="modal-title fw-bold">Register New Land Parcel</h5>
-              <p class="text-muted small mb-0">Add a new parcel to the registry</p>
-            </div>
-            <button type="button" class="btn-close" @click="closeNewParcelModal"></button>
-          </div>
-          <div class="modal-body">
-            <form @submit.prevent="submitNewParcel">
-              <div class="row g-3">
-                <div class="col-12 col-md-6">
-                  <label class="form-label fw-semibold">Parcel Number *</label>
-                  <input v-model="newParcel.parcelNumber" type="text" class="form-control" required>
-                </div>
-                <div class="col-12 col-md-6">
-                  <label class="form-label fw-semibold">County *</label>
-                  <select v-model="newParcel.county" class="form-select" required>
-                    <option value="">Select County</option>
-                    <option value="Nairobi">Nairobi</option>
-                    <option value="Mombasa">Mombasa</option>
-                    <option value="Kisumu">Kisumu</option>
-                    <option value="Nakuru">Nakuru</option>
-                    <option value="Kiambu">Kiambu</option>
-                    <option value="Kajiado">Kajiado</option>
-                  </select>
-                </div>
-                <div class="col-12 col-md-6">
-                  <label class="form-label fw-semibold">Sub-County</label>
-                  <input v-model="newParcel.subCounty" type="text" class="form-control">
-                </div>
-                <div class="col-12 col-md-6">
-                  <label class="form-label fw-semibold">Ward</label>
-                  <input v-model="newParcel.ward" type="text" class="form-control">
-                </div>
-                <div class="col-12">
-                  <label class="form-label fw-semibold">Location Description</label>
-                  <input v-model="newParcel.locationDescription" type="text" class="form-control">
-                </div>
-                <div class="col-12 col-md-6">
-                  <label class="form-label fw-semibold">Size (Acres/Hectares) *</label>
-                  <input v-model="newParcel.size" type="number" step="0.01" class="form-control" required>
-                </div>
-                <div class="col-12 col-md-6">
-                  <label class="form-label fw-semibold">Unit *</label>
-                  <select v-model="newParcel.unit" class="form-select" required>
-                    <option value="acres">Acres</option>
-                    <option value="hectares">Hectares</option>
-                  </select>
-                </div>
-                <div class="col-12 col-md-6">
-                  <label class="form-label fw-semibold">Land Use *</label>
-                  <select v-model="newParcel.landUse" class="form-select" required>
-                    <option value="Residential">Residential</option>
-                    <option value="Commercial">Commercial</option>
-                    <option value="Agricultural">Agricultural</option>
-                    <option value="Industrial">Industrial</option>
-                    <option value="Mixed">Mixed</option>
-                  </select>
-                </div>
-                <div class="col-12 col-md-6">
-                  <label class="form-label fw-semibold">Owner National ID *</label>
-                  <input v-model="newParcel.ownerId" type="text" class="form-control" required>
-                </div>
-                <div class="col-12">
-                  <label class="form-label fw-semibold">Boundaries</label>
-                  <textarea v-model="newParcel.boundaries" class="form-control" rows="2" placeholder="North: ..., South: ..., East: ..., West: ..."></textarea>
-                </div>
-                <div class="col-12">
-                  <label class="form-label fw-semibold">Notes</label>
-                  <textarea v-model="newParcel.notes" class="form-control" rows="2"></textarea>
-                </div>
-              </div>
-
-              <div v-if="parcelError" class="alert alert-danger mt-3 mb-0">
-                {{ parcelError }}
-              </div>
-              <div v-if="parcelSuccess" class="alert alert-success mt-3 mb-0">
-                {{ parcelSuccess }}
-              </div>
-            </form>
-          </div>
-          <div class="modal-footer border-0">
-            <button type="button" class="btn btn-light" @click="closeNewParcelModal">Cancel</button>
-            <button type="button" class="btn btn-dark" @click="submitNewParcel" :disabled="parcelLoading">
-              <span v-if="parcelLoading" class="spinner-border spinner-border-sm me-2"></span>
-              Register Parcel
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- New Transfer Modal -->
-    <div v-if="showNewTransferModal" class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
-      <div class="modal-dialog modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg">
-          <div class="modal-header border-0 pb-0">
-            <div>
-              <h5 class="modal-title fw-bold">Initiate Land Transfer</h5>
-              <p class="text-muted small mb-0">Start a new ownership transfer</p>
-            </div>
-            <button type="button" class="btn-close" @click="closeNewTransferModal"></button>
-          </div>
-          <div class="modal-body">
-            <form @submit.prevent="submitNewTransfer">
-              <div class="mb-3">
-                <label class="form-label fw-semibold">Parcel Number *</label>
-                <input v-model="newTransfer.parcelNumber" type="text" class="form-control" required>
-              </div>
-              <div class="mb-3">
-                <label class="form-label fw-semibold">New Owner National ID *</label>
-                <input v-model="newTransfer.newOwnerId" type="text" class="form-control" required>
-              </div>
-              <div class="mb-3">
-                <label class="form-label fw-semibold">Transfer Type *</label>
-                <select v-model="newTransfer.transferType" class="form-select" required>
-                  <option value="Sale">Sale</option>
-                  <option value="Gift">Gift</option>
-                  <option value="Inheritance">Inheritance</option>
-                  <option value="Lease">Lease</option>
-                </select>
-              </div>
-              <div class="mb-3">
-                <label class="form-label fw-semibold">Transfer Fee (KES)</label>
-                <input v-model="newTransfer.transferFee" type="number" step="0.01" class="form-control">
-              </div>
-              <div class="mb-3">
-                <label class="form-label fw-semibold">Notes</label>
-                <textarea v-model="newTransfer.notes" class="form-control" rows="3"></textarea>
-              </div>
-
-              <div v-if="transferError" class="alert alert-danger mb-0">
-                {{ transferError }}
-              </div>
-              <div v-if="transferSuccess" class="alert alert-success mb-0">
-                {{ transferSuccess }}
-              </div>
-            </form>
-          </div>
-          <div class="modal-footer border-0">
-            <button type="button" class="btn btn-light" @click="closeNewTransferModal">Cancel</button>
-            <button type="button" class="btn btn-dark" @click="submitNewTransfer" :disabled="transferLoading">
-              <span v-if="transferLoading" class="spinner-border spinner-border-sm me-2"></span>
-              Initiate Transfer
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Verify Document Modal -->
-    <div v-if="showVerifyModal" class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
-      <div class="modal-dialog">
-        <div class="modal-content border-0 shadow-lg">
-          <div class="modal-header border-0 pb-0">
-            <div>
-              <h5 class="modal-title fw-bold">Verify Document</h5>
-              <p class="text-muted small mb-0">Check document authenticity</p>
-            </div>
-            <button type="button" class="btn-close" @click="showVerifyModal = false"></button>
-          </div>
-          <div class="modal-body">
-            <div class="mb-3">
-              <label class="form-label fw-semibold">Document ID / Hash</label>
-              <input v-model="verifyDocId" type="text" class="form-control" placeholder="Enter document ID or hash">
-            </div>
-            <div class="text-center">
-              <button class="btn btn-primary" @click="verifyDocument">
-                <i class="bi bi-shield-check me-2"></i>Verify
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Review Transfer Modal -->
-    <div v-if="showReviewModal" class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content border-0 shadow-lg">
-          <div class="modal-header border-0 pb-0">
-            <div>
-              <h5 class="modal-title fw-bold">Review Transfer Request</h5>
-              <p class="text-muted small mb-0">Approve or reject this transfer</p>
-            </div>
-            <button type="button" class="btn-close" @click="closeReviewModal"></button>
-          </div>
-          <div class="modal-body" v-if="selectedTransfer">
-            <div class="row g-3 mb-4">
-              <div class="col-12">
-                <div class="p-3 bg-light rounded">
-                  <div class="row">
-                    <div class="col-6">
-                      <small class="text-muted d-block">Parcel Number</small>
-                      <strong>{{ selectedTransfer.landParcel?.parcelNumber || 'N/A' }}</strong>
-                    </div>
-                    <div class="col-6">
-                      <small class="text-muted d-block">Location</small>
-                      <strong>{{ selectedTransfer.landParcel?.location?.county || 'N/A' }}</strong>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div class="col-6">
-                <small class="text-muted d-block mb-1">Current Owner</small>
-                <div class="fw-semibold">{{ selectedTransfer.currentOwner?.fullName || 'N/A' }}</div>
-                <small class="text-muted">ID: {{ selectedTransfer.currentOwner?.nationalId || 'N/A' }}</small>
-              </div>
-              <div class="col-6">
-                <small class="text-muted d-block mb-1">New Owner</small>
-                <div class="fw-semibold">{{ selectedTransfer.newOwner?.fullName || 'N/A' }}</div>
-                <small class="text-muted">ID: {{ selectedTransfer.newOwner?.nationalId || 'N/A' }}</small>
-              </div>
-              <div class="col-6">
-                <small class="text-muted d-block mb-1">Transfer Type</small>
-                <div class="fw-semibold">{{ selectedTransfer.transferType || 'N/A' }}</div>
-              </div>
-              <div class="col-6">
-                <small class="text-muted d-block mb-1">Status</small>
-                <span :class="['badge badge-pill-custom', getStatusClass(selectedTransfer.status)]">
-                  {{ selectedTransfer.status }}
-                </span>
-              </div>
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label fw-semibold">Officer Notes</label>
-              <textarea v-model="reviewNotes" class="form-control" rows="3" placeholder="Add your review notes..."></textarea>
-            </div>
-
-            <div v-if="reviewError" class="alert alert-danger mb-0">
-              {{ reviewError }}
-            </div>
-          </div>
-          <div class="modal-footer border-0">
-            <button type="button" class="btn btn-light" @click="closeReviewModal">Cancel</button>
-            <button type="button" class="btn btn-danger" @click="rejectTransfer" :disabled="reviewLoading">
-              <i class="bi bi-x-circle me-2"></i>Reject
-            </button>
-            <button type="button" class="btn btn-success" @click="approveTransfer" :disabled="reviewLoading">
-              <span v-if="reviewLoading" class="spinner-border spinner-border-sm me-2"></span>
-              <i v-else class="bi bi-check-circle me-2"></i>Approve
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -633,310 +485,165 @@ export default {
   setup() {
     const router = useRouter()
     const authStore = useAuthStore()
-
     const user = computed(() => authStore.user)
-    const searchQuery = ref('')
+
+    // State
     const loading = ref(false)
-    const transferFilter = ref('all')
+    const loadingParcels = ref(false)
+    const transferFilter = ref('pending')
 
     // Statistics
     const stats = ref({
       pendingApprovals: 0,
       totalParcels: 0,
-      completedToday: 0,
-      verifications: 0
+      totalArea: 0,
+      completedThisMonth: 0,
+      registeredByMe: 0
     })
 
     // Data
     const transfers = ref([])
     const recentParcels = ref([])
-    const notifications = ref([])
-    const recentActivity = ref([
-      {
-        title: 'Transfer Approved',
-        description: 'Parcel KE-NAI-2024-001 ownership transferred',
-        time: '2 hours ago',
-        icon: 'bi-check-circle',
-        iconBg: 'bg-success text-white'
-      },
-      {
-        title: 'New Parcel Registered',
-        description: 'KE-MBS-2024-045 added to registry',
-        time: '5 hours ago',
-        icon: 'bi-plus-circle',
-        iconBg: 'bg-warning text-dark'
-      },
-      {
-        title: 'Document Verified',
-        description: 'Title deed authentication completed',
-        time: '1 day ago',
-        icon: 'bi-shield-check',
-        iconBg: 'bg-primary text-white'
-      }
-    ])
-
-    // Modals
-    const showNewParcelModal = ref(false)
-    const showNewTransferModal = ref(false)
-    const showVerifyModal = ref(false)
-    const showReviewModal = ref(false)
-    const selectedTransfer = ref(null)
-
-    // Forms
-    const newParcel = ref({
-      parcelNumber: '',
-      county: '',
-      subCounty: '',
-      ward: '',
-      locationDescription: '',
-      size: '',
-      unit: 'acres',
-      landUse: '',
-      ownerId: '',
-      boundaries: '',
-      notes: ''
+    const recentActivity = ref([])
+    
+    const countyStats = ref({
+      nairobi: 0,
+      kiambu: 0,
+      nakuru: 0,
+      other: 0
     })
 
-    const newTransfer = ref({
-      parcelNumber: '',
-      newOwnerId: '',
-      transferType: 'Sale',
-      transferFee: '',
-      notes: ''
+    const transferStats = ref({
+      pending: 0,
+      approved: 0,
+      rejected: 0,
+      cancelled: 0
     })
-
-    const verifyDocId = ref('')
-    const reviewNotes = ref('')
-
-    // Loading states
-    const parcelLoading = ref(false)
-    const transferLoading = ref(false)
-    const reviewLoading = ref(false)
-
-    // Error/Success messages
-    const parcelError = ref(null)
-    const parcelSuccess = ref(null)
-    const transferError = ref(null)
-    const transferSuccess = ref(null)
-    const reviewError = ref(null)
 
     // Computed
     const filteredTransfers = computed(() => {
-      if (transferFilter.value === 'all') return transfers.value
+      if (transferFilter.value === 'all') {
+        return transfers.value
+      }
       return transfers.value.filter(t => t.status === transferFilter.value)
     })
 
     // Methods
     const fetchDashboardData = async () => {
       loading.value = true
+      loadingParcels.value = true
+
       try {
-        const [transfersRes, parcelsRes] = await Promise.allSettled([
-          api.get('/transfers?limit=10'),
-          api.get('/parcels?limit=5')
-        ])
-
-        if (transfersRes.status === 'fulfilled' && transfersRes.value?.data?.data) {
-          transfers.value = transfersRes.value.data.data.transfers || []
+        // Fetch transfers
+        const transfersRes = await api.get('/transfers')
+        if (transfersRes.data?.data?.transfers) {
+          transfers.value = transfersRes.data.data.transfers
           stats.value.pendingApprovals = transfers.value.filter(t => t.status === 'pending').length
-          stats.value.completedToday = transfers.value.filter(t => {
-            const today = new Date().toDateString()
-            return new Date(t.updatedAt).toDateString() === today && t.status === 'approved'
-          }).length
+          
+          // Count completed this month
+          const now = new Date()
+          const thisMonth = transfers.value.filter(t => {
+            if (t.status !== 'approved' && t.status !== 'completed') return false
+            const date = new Date(t.updatedAt || t.createdAt)
+            return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()
+          })
+          stats.value.completedThisMonth = thisMonth.length
         }
 
-        if (parcelsRes.status === 'fulfilled' && parcelsRes.value?.data?.data) {
-          recentParcels.value = parcelsRes.value.data.data.parcels || []
-          stats.value.totalParcels = parcelsRes.value.data.data.total || recentParcels.value.length
+        // Fetch parcels
+        const parcelsRes = await api.get('/land-parcels')
+        if (parcelsRes.data?.data?.parcels) {
+          recentParcels.value = parcelsRes.data.data.parcels
+          stats.value.totalParcels = recentParcels.value.length
+          stats.value.totalArea = recentParcels.value.reduce((sum, p) => sum + (parseFloat(p.sizeInAcres) || 0), 0).toFixed(2)
+          
+          // Count registered by current officer
+          stats.value.registeredByMe = recentParcels.value.filter(
+            p => p.registeredBy === user.value.id
+          ).length
+
+          // Calculate county distribution
+          countyStats.value = {
+            nairobi: recentParcels.value.filter(p => p.location?.county === 'Nairobi').length,
+            kiambu: recentParcels.value.filter(p => p.location?.county === 'Kiambu').length,
+            nakuru: recentParcels.value.filter(p => p.location?.county === 'Nakuru').length,
+            other: recentParcels.value.filter(p => p.location?.county && !['Nairobi', 'Kiambu', 'Nakuru'].includes(p.location.county)).length
+          }
+
+          // Generate recent activity from parcels
+          const recentParcelActivities = recentParcels.value.slice(0, 3).map(p => ({
+            title: 'New Parcel Registered',
+            description: `${p.parcelNumber} in ${p.location?.county || 'Unknown'}`,
+            time: formatRelativeTime(p.createdAt),
+            icon: 'bi-map-fill',
+            iconBg: 'bg-primary text-white'
+          }))
+
+          // Generate activity from transfers
+          const recentTransferActivities = transfers.value.slice(0, 2).map(t => ({
+            title: t.status === 'approved' ? 'Transfer Approved' : 'Transfer Pending',
+            description: `${t.landParcel?.parcelNumber || 'Parcel'} ownership change`,
+            time: formatRelativeTime(t.createdAt),
+            icon: t.status === 'approved' ? 'bi-check-circle-fill' : 'bi-hourglass-split',
+            iconBg: t.status === 'approved' ? 'bg-success text-white' : 'bg-warning text-dark'
+          }))
+
+          recentActivity.value = [...recentTransferActivities, ...recentParcelActivities].slice(0, 5)
         }
 
-        stats.value.verifications = 156 // Mock data
+        // Calculate transfer statistics
+        transferStats.value = {
+          pending: transfers.value.filter(t => t.status === 'pending').length,
+          approved: transfers.value.filter(t => t.status === 'approved' || t.status === 'completed').length,
+          rejected: transfers.value.filter(t => t.status === 'rejected').length,
+          cancelled: transfers.value.filter(t => t.status === 'cancelled').length
+        }
       } catch (err) {
-        console.error('Error loading dashboard:', err)
+        console.error('Error loading dashboard data:', err)
       } finally {
         loading.value = false
+        loadingParcels.value = false
       }
     }
 
-    const performSearch = () => {
-      if (searchQuery.value.trim()) {
-        router.push({ path: '/parcels', query: { search: searchQuery.value } })
-      }
-    }
+    const formatRelativeTime = (date) => {
+      if (!date) return 'Recently'
+      const now = new Date()
+      const then = new Date(date)
+      const diffMs = now - then
+      const diffMins = Math.floor(diffMs / 60000)
+      const diffHours = Math.floor(diffMs / 3600000)
+      const diffDays = Math.floor(diffMs / 86400000)
 
-    const submitNewParcel = async () => {
-      parcelLoading.value = true
-      parcelError.value = null
-      parcelSuccess.value = null
-
-      try {
-        await api.post('/parcels', {
-          parcelNumber: newParcel.value.parcelNumber,
-          location: {
-            county: newParcel.value.county,
-            subCounty: newParcel.value.subCounty,
-            ward: newParcel.value.ward,
-            description: newParcel.value.locationDescription,
-            coordinates: { latitude: -1.2921, longitude: 36.8219 }
-          },
-          size: {
-            value: parseFloat(newParcel.value.size),
-            unit: newParcel.value.unit
-          },
-          landUse: newParcel.value.landUse,
-          owner: newParcel.value.ownerId,
-          boundaries: newParcel.value.boundaries,
-          notes: newParcel.value.notes
-        })
-
-        parcelSuccess.value = 'Parcel registered successfully!'
-        setTimeout(() => {
-          closeNewParcelModal()
-          fetchDashboardData()
-        }, 1500)
-      } catch (err) {
-        parcelError.value = err.response?.data?.message || 'Failed to register parcel'
-      } finally {
-        parcelLoading.value = false
-      }
-    }
-
-    const submitNewTransfer = async () => {
-      transferLoading.value = true
-      transferError.value = null
-      transferSuccess.value = null
-
-      try {
-        await api.post('/transfers', {
-          parcelNumber: newTransfer.value.parcelNumber,
-          newOwnerNationalId: newTransfer.value.newOwnerId,
-          transferType: newTransfer.value.transferType,
-          transferFee: newTransfer.value.transferFee ? parseFloat(newTransfer.value.transferFee) : undefined,
-          notes: newTransfer.value.notes
-        })
-
-        transferSuccess.value = 'Transfer initiated successfully!'
-        setTimeout(() => {
-          closeNewTransferModal()
-          fetchDashboardData()
-        }, 1500)
-      } catch (err) {
-        transferError.value = err.response?.data?.message || 'Failed to initiate transfer'
-      } finally {
-        transferLoading.value = false
-      }
+      if (diffMins < 1) return 'Just now'
+      if (diffMins < 60) return `${diffMins} min ago`
+      if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+      if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
+      return formatDate(date)
     }
 
     const reviewTransfer = (transfer) => {
-      selectedTransfer.value = transfer
-      reviewNotes.value = ''
-      showReviewModal.value = true
-    }
-
-    const approveTransfer = async () => {
-      if (!selectedTransfer.value) return
-      
-      reviewLoading.value = true
-      reviewError.value = null
-
-      try {
-        await api.patch(`/transfers/${selectedTransfer.value._id}/status`, {
-          status: 'approved',
-          notes: reviewNotes.value
-        })
-
-        closeReviewModal()
-        fetchDashboardData()
-      } catch (err) {
-        reviewError.value = err.response?.data?.message || 'Failed to approve transfer'
-      } finally {
-        reviewLoading.value = false
-      }
-    }
-
-    const rejectTransfer = async () => {
-      if (!selectedTransfer.value) return
-      
-      reviewLoading.value = true
-      reviewError.value = null
-
-      try {
-        await api.patch(`/transfers/${selectedTransfer.value._id}/status`, {
-          status: 'rejected',
-          notes: reviewNotes.value
-        })
-
-        closeReviewModal()
-        fetchDashboardData()
-      } catch (err) {
-        reviewError.value = err.response?.data?.message || 'Failed to reject transfer'
-      } finally {
-        reviewLoading.value = false
-      }
-    }
-
-    const verifyDocument = () => {
-      alert(`Verifying document: ${verifyDocId.value}`)
-      showVerifyModal.value = false
-    }
-
-    const closeNewParcelModal = () => {
-      showNewParcelModal.value = false
-      newParcel.value = {
-        parcelNumber: '',
-        county: '',
-        subCounty: '',
-        ward: '',
-        locationDescription: '',
-        size: '',
-        unit: 'acres',
-        landUse: '',
-        ownerId: '',
-        boundaries: '',
-        notes: ''
-      }
-      parcelError.value = null
-      parcelSuccess.value = null
-    }
-
-    const closeNewTransferModal = () => {
-      showNewTransferModal.value = false
-      newTransfer.value = {
-        parcelNumber: '',
-        newOwnerId: '',
-        transferType: 'Sale',
-        transferFee: '',
-        notes: ''
-      }
-      transferError.value = null
-      transferSuccess.value = null
-    }
-
-    const closeReviewModal = () => {
-      showReviewModal.value = false
-      selectedTransfer.value = null
-      reviewNotes.value = ''
-      reviewError.value = null
+      router.push(`/transfers/${transfer._id}`)
     }
 
     const formatDate = (date) => {
       if (!date) return 'N/A'
-      const d = new Date(date)
-      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      return new Date(date).toLocaleDateString('en-KE', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      })
     }
 
-    const getStatusClass = (status) => {
-      const classes = {
-        pending: 'badge-soft-yellow',
-        approved: 'badge-soft-green',
-        rejected: 'badge-soft-red',
-        in_review: 'badge-soft-blue'
+    const getStatusBadgeClass = (status) => {
+      const statusMap = {
+        'pending': 'bg-warning text-dark',
+        'approved': 'bg-success text-white',
+        'completed': 'bg-success text-white',
+        'rejected': 'bg-danger text-white',
+        'cancelled': 'bg-secondary text-white'
       }
-      return classes[status] || 'badge-soft-blue'
-    }
-
-    const handleLogout = () => {
-      authStore.logout()
-      router.push('/login')
+      return statusMap[status?.toLowerCase()] || 'bg-secondary text-white'
     }
 
     onMounted(() => {
@@ -945,55 +652,64 @@ export default {
 
     return {
       user,
-      searchQuery,
       loading,
+      loadingParcels,
       transferFilter,
       stats,
       transfers,
-      filteredTransfers,
       recentParcels,
-      notifications,
       recentActivity,
-      showNewParcelModal,
-      showNewTransferModal,
-      showVerifyModal,
-      showReviewModal,
-      selectedTransfer,
-      newParcel,
-      newTransfer,
-      verifyDocId,
-      reviewNotes,
-      parcelLoading,
-      transferLoading,
-      reviewLoading,
-      parcelError,
-      parcelSuccess,
-      transferError,
-      transferSuccess,
-      reviewError,
-      performSearch,
-      submitNewParcel,
-      submitNewTransfer,
+      countyStats,
+      transferStats,
+      filteredTransfers,
       reviewTransfer,
-      approveTransfer,
-      rejectTransfer,
-      verifyDocument,
-      closeNewParcelModal,
-      closeNewTransferModal,
-      closeReviewModal,
       formatDate,
-      getStatusClass,
-      handleLogout,
-      authStore
+      fetchDashboardData,
+      getStatusBadgeClass
     }
   }
 }
 </script>
 
 <style scoped>
-.activity-item:last-child {
-  border-bottom: none !important;
-  margin-bottom: 0 !important;
-  padding-bottom: 0 !important;
+.table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.activity-feed {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.activity-feed::-webkit-scrollbar {
+  width: 4px;
+}
+
+.activity-feed::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.activity-feed::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+.activity-feed::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+.progress {
+  background-color: #e9ecef;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  transition: width 0.6s ease;
 }
 </style>

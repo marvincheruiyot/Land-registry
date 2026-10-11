@@ -503,3 +503,136 @@ exports.updateSystemConfig = async (req, res, next) => {
     next(error);
   }
 };
+
+// Debug endpoint: Check and fix parcel ownership
+exports.fixParcelOwnership = async (req, res, next) => {
+  try {
+    const { nationalId } = req.body;
+    
+    if (!nationalId) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'National ID is required'
+      });
+    }
+
+    // Find all users with this National ID
+    const users = await User.find({ nationalId });
+    
+    if (users.length === 0) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'No user found with this National ID'
+      });
+    }
+
+    // Find the real user (non-placeholder) or the most recent user
+    const realUser = users.find(u => !u.isPlaceholder && u.isActive) || users[users.length - 1];
+    
+    // Find all parcels owned by ANY user with this National ID
+    const allUserIds = users.map(u => u._id);
+    const parcels = await LandParcel.find({ 
+      currentOwner: { $in: allUserIds } 
+    });
+
+    // Update all parcels to point to the real user
+    let updatedCount = 0;
+    for (const parcel of parcels) {
+      if (parcel.currentOwner.toString() !== realUser._id.toString()) {
+        parcel.currentOwner = realUser._id;
+        await parcel.save();
+        updatedCount++;
+      }
+    }
+
+    // Deactivate or delete duplicate/placeholder users
+    for (const user of users) {
+      if (user._id.toString() !== realUser._id.toString()) {
+        if (user.isPlaceholder) {
+          await User.findByIdAndDelete(user._id);
+        } else {
+          user.isActive = false;
+          await user.save();
+        }
+      }
+    }
+
+    res.status(200).json({
+      status: 'success',
+      message: `Fixed ownership for ${parcels.length} parcel(s). Updated ${updatedCount} parcel(s) to correct owner.`,
+      data: {
+        correctUser: {
+          id: realUser._id,
+          name: realUser.fullName,
+          email: realUser.email,
+          nationalId: realUser.nationalId
+        },
+        parcelsFound: parcels.length,
+        parcelsUpdated: updatedCount,
+        duplicateUsersRemoved: users.length - 1
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Debug endpoint: Check user and parcel status
+exports.debugUserParcels = async (req, res, next) => {
+  try {
+    const { nationalId } = req.query;
+    
+    if (!nationalId) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'National ID is required'
+      });
+    }
+
+    // Find all users with this National ID
+    const users = await User.find({ nationalId }).select('-password');
+    
+    // Find all parcels for these users
+    const allUserIds = users.map(u => u._id);
+    const parcels = await LandParcel.find({ 
+      currentOwner: { $in: allUserIds } 
+    }).populate('currentOwner', 'fullName email nationalId isPlaceholder isActive');
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        nationalId,
+        usersFound: users.length,
+        users: users.map(u => ({
+          id: u._id,
+          fullName: u.fullName,
+          email: u.email,
+          nationalId: u.nationalId,
+          role: u.role,
+          isActive: u.isActive,
+          isPlaceholder: u.isPlaceholder,
+          createdAt: u.createdAt
+        })),
+        parcelsFound: parcels.length,
+        parcels: parcels.map(p => ({
+          id: p._id,
+          parcelNumber: p.parcelNumber,
+          titleDeedNumber: p.titleDeedNumber,
+          sizeInAcres: p.sizeInAcres,
+          county: p.location?.county,
+          owner: {
+            id: p.currentOwner._id,
+            name: p.currentOwner.fullName,
+            email: p.currentOwner.email,
+            nationalId: p.currentOwner.nationalId,
+            isPlaceholder: p.currentOwner.isPlaceholder,
+            isActive: p.currentOwner.isActive
+          }
+        }))
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

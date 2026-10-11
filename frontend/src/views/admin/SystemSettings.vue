@@ -5,11 +5,11 @@
     <main class="flex-grow-1 p-3 p-md-4 p-xl-5">
       <!-- Header -->
       <div class="mb-4">
-        <span class="badge badge-pill-custom badge-soft-blue mb-2">
-          <i class="bi bi-gear-fill"></i> System Configuration
+        <span class="badge badge-pill-custom mb-2" :class="isAdministrator ? 'badge-soft-blue' : 'badge-soft-green'">
+          <i class="bi bi-gear-fill"></i> {{ isAdministrator ? 'System Configuration' : 'Officer Settings' }}
         </span>
-        <h1 class="fw-bold text-dark fs-2 mb-1">System Settings</h1>
-        <p class="text-muted mb-0">Customize your Land Registry system preferences</p>
+        <h1 class="fw-bold text-dark fs-2 mb-1">{{ isAdministrator ? 'System Settings' : 'My Settings' }}</h1>
+        <p class="text-muted mb-0">{{ isAdministrator ? 'Customize your Land Registry system preferences' : 'Personalize your workspace and preferences' }}</p>
       </div>
 
       <div class="row g-4">
@@ -256,7 +256,7 @@
         </div>
 
         <!-- Privacy & Security -->
-        <div class="col-12">
+        <div class="col-12" v-if="isAdministrator">
           <div class="dash-card">
             <div class="d-flex align-items-center gap-3 mb-4">
               <div class="avatar-circle bg-danger text-white">
@@ -315,6 +315,119 @@
           </div>
         </div>
 
+        <!-- Officer-Specific Settings -->
+        <div class="col-12" v-if="isLandOfficer">
+          <div class="dash-card border-success">
+            <div class="d-flex align-items-center gap-3 mb-4">
+              <div class="avatar-circle bg-success text-white">
+                <i class="bi bi-person-workspace"></i>
+              </div>
+              <div>
+                <h5 class="fw-bold mb-0">🏢 Officer Workspace</h5>
+                <small class="text-muted">Land Officer specific preferences</small>
+              </div>
+            </div>
+
+            <div class="row g-4">
+              <div class="col-md-6">
+                <!-- Default County -->
+                <div class="mb-4">
+                  <label class="form-label fw-semibold text-dark">Default County</label>
+                  <select v-model="settings.defaultCounty" class="form-select" @change="saveSettings">
+                    <option value="">Select default county</option>
+                    <option value="Nairobi">Nairobi</option>
+                    <option value="Mombasa">Mombasa</option>
+                    <option value="Kisumu">Kisumu</option>
+                    <option value="Nakuru">Nakuru</option>
+                    <option value="Kiambu">Kiambu</option>
+                    <option value="Kajiado">Kajiado</option>
+                    <option value="Machakos">Machakos</option>
+                    <option value="Nyeri">Nyeri</option>
+                  </select>
+                  <small class="text-muted d-block mt-2">Pre-fill county in registration forms</small>
+                </div>
+
+                <!-- Auto-save Drafts -->
+                <div class="form-check form-switch mb-3">
+                  <input class="form-check-input" type="checkbox" id="autoSave" v-model="settings.autoSaveDrafts" @change="saveSettings">
+                  <label class="form-check-label fw-semibold" for="autoSave">
+                    Auto-save Form Drafts
+                  </label>
+                  <small class="text-muted d-block">Automatically save incomplete registrations</small>
+                </div>
+
+                <!-- Quick Actions Toolbar -->
+                <div class="form-check form-switch mb-3">
+                  <input class="form-check-input" type="checkbox" id="quickActions" v-model="settings.showQuickActions" @change="saveSettings">
+                  <label class="form-check-label fw-semibold" for="quickActions">
+                    Show Quick Actions Toolbar
+                  </label>
+                  <small class="text-muted d-block">Display floating action buttons</small>
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <!-- Dashboard Layout -->
+                <div class="mb-4">
+                  <label class="form-label fw-semibold text-dark">Dashboard Layout</label>
+                  <select v-model="settings.dashboardLayout" class="form-select" @change="saveSettings">
+                    <option value="compact">Compact</option>
+                    <option value="comfortable">Comfortable</option>
+                    <option value="spacious">Spacious</option>
+                  </select>
+                  <small class="text-muted d-block mt-2">Card spacing and density</small>
+                </div>
+
+                <!-- Email Notifications for Transfers -->
+                <div class="form-check form-switch mb-3">
+                  <input class="form-check-input" type="checkbox" id="emailNotifTransfers" v-model="settings.emailNotifyTransfers" @change="saveSettings">
+                  <label class="form-check-label fw-semibold" for="emailNotifTransfers">
+                    Email Alerts for New Transfers
+                  </label>
+                  <small class="text-muted d-block">Get notified of pending approvals</small>
+                </div>
+
+                <!-- Show Statistics Widget -->
+                <div class="form-check form-switch mb-3">
+                  <input class="form-check-input" type="checkbox" id="statsWidget" v-model="settings.showStatsWidget" @change="saveSettings">
+                  <label class="form-check-label fw-semibold" for="statsWidget">
+                    Display Performance Metrics
+                  </label>
+                  <small class="text-muted d-block">Show your productivity stats</small>
+                </div>
+              </div>
+
+              <!-- Work Hours Preference -->
+              <div class="col-12">
+                <div class="card bg-light border-0">
+                  <div class="card-body">
+                    <h6 class="fw-bold mb-3">
+                      <i class="bi bi-clock me-2"></i>Working Hours Preference
+                    </h6>
+                    <div class="row g-3">
+                      <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Start Time</label>
+                        <input type="time" v-model="settings.workStartTime" class="form-control" @change="saveSettings">
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label small fw-semibold">End Time</label>
+                        <input type="time" v-model="settings.workEndTime" class="form-control" @change="saveSettings">
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label small fw-semibold">Daily Target</label>
+                        <input type="number" v-model="settings.dailyTarget" class="form-control" placeholder="e.g., 10" @change="saveSettings">
+                      </div>
+                    </div>
+                    <small class="text-muted d-block mt-2">
+                      <i class="bi bi-info-circle me-1"></i>Used for workload planning and reminders
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Action Buttons -->
         <div class="col-12">
           <div class="dash-card">
@@ -333,21 +446,159 @@
             </div>
           </div>
         </div>
+
+        <!-- Admin Debug Tools -->
+        <div class="col-12" v-if="isAdministrator">
+          <div class="dash-card border-warning">
+            <div class="d-flex align-items-center gap-3 mb-4">
+              <div class="avatar-circle bg-warning text-dark">
+                <i class="bi bi-wrench-adjustable-circle-fill"></i>
+              </div>
+              <div>
+                <h5 class="fw-bold mb-0">🔧 Admin Debug Tools</h5>
+                <small class="text-muted">Fix ownership and data issues</small>
+              </div>
+            </div>
+
+            <div class="alert alert-warning">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i>
+              <strong>Administrator Only:</strong> These tools fix database issues. Use with caution.
+            </div>
+
+            <!-- Check Parcel Ownership -->
+            <div class="card bg-light border-0 mb-3">
+              <div class="card-body">
+                <h6 class="fw-bold mb-3">
+                  <i class="bi bi-search me-2"></i>Check Parcel Ownership
+                </h6>
+                <p class="small text-muted mb-3">
+                  Debug tool: Check if a user has parcels registered under their National ID
+                </p>
+                <div class="row g-2">
+                  <div class="col-md-8">
+                    <input 
+                      v-model="debugNationalId" 
+                      type="text" 
+                      class="form-control" 
+                      placeholder="Enter National ID (e.g., 42207690)"
+                    />
+                  </div>
+                  <div class="col-md-4">
+                    <button @click="checkOwnership" :disabled="debugLoading" class="btn btn-warning w-100">
+                      <span v-if="debugLoading" class="spinner-border spinner-border-sm me-2"></span>
+                      <i v-else class="bi bi-search me-2"></i>
+                      Check
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Debug Results -->
+                <div v-if="debugResults" class="mt-3">
+                  <div class="alert" :class="debugResults.parcelsFound > 0 ? 'alert-success' : 'alert-info'">
+                    <strong>Results for National ID: {{ debugResults.nationalId }}</strong>
+                    <hr class="my-2">
+                    <p class="mb-2"><strong>Users Found:</strong> {{ debugResults.usersFound }}</p>
+                    <div v-if="debugResults.usersFound > 0" class="mb-2">
+                      <strong>User Details:</strong>
+                      <ul class="mb-0 mt-1">
+                        <li v-for="user in debugResults.users" :key="user.id" class="small">
+                          {{ user.fullName }} ({{ user.email }}) - 
+                          <span class="badge" :class="user.isActive ? 'bg-success' : 'bg-secondary'">
+                            {{ user.isActive ? 'Active' : 'Inactive' }}
+                          </span>
+                          <span v-if="user.isPlaceholder" class="badge bg-warning text-dark">Placeholder</span>
+                        </li>
+                      </ul>
+                    </div>
+                    <p class="mb-2"><strong>Parcels Found:</strong> {{ debugResults.parcelsFound }}</p>
+                    <div v-if="debugResults.parcelsFound > 0">
+                      <strong>Parcel Details:</strong>
+                      <ul class="mb-0 mt-1">
+                        <li v-for="parcel in debugResults.parcels" :key="parcel.id" class="small">
+                          <strong>{{ parcel.parcelNumber }}</strong> - {{ parcel.sizeInAcres }} acres in {{ parcel.county }}
+                          <br>
+                          <span class="text-muted">Owner: {{ parcel.owner.name }} ({{ parcel.owner.email }})</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Fix Ownership -->
+            <div class="card bg-light border-0">
+              <div class="card-body">
+                <h6 class="fw-bold mb-3">
+                  <i class="bi bi-tools me-2"></i>Fix Parcel Ownership
+                </h6>
+                <p class="small text-muted mb-3">
+                  If a user can't see their parcels, this tool will fix the ownership links
+                </p>
+                <div class="row g-2">
+                  <div class="col-md-8">
+                    <input 
+                      v-model="fixNationalId" 
+                      type="text" 
+                      class="form-control" 
+                      placeholder="Enter National ID to fix"
+                    />
+                  </div>
+                  <div class="col-md-4">
+                    <button @click="fixOwnership" :disabled="fixLoading" class="btn btn-danger w-100">
+                      <span v-if="fixLoading" class="spinner-border spinner-border-sm me-2"></span>
+                      <i v-else class="bi bi-wrench me-2"></i>
+                      Fix Now
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Fix Results -->
+                <div v-if="fixResults" class="mt-3">
+                  <div class="alert alert-success">
+                    <strong>✅ Fixed Successfully!</strong>
+                    <hr class="my-2">
+                    <p class="mb-2">{{ fixResults.message }}</p>
+                    <p class="mb-0 small">
+                      <strong>Correct User:</strong> {{ fixResults.data.correctUser.name }}<br>
+                      <strong>Parcels Found:</strong> {{ fixResults.data.parcelsFound }}<br>
+                      <strong>Parcels Updated:</strong> {{ fixResults.data.parcelsUpdated }}<br>
+                      <strong>Duplicate Users Removed:</strong> {{ fixResults.data.duplicateUsersRemoved }}
+                    </p>
+                  </div>
+                </div>
+
+                <div v-if="fixError" class="mt-3">
+                  <div class="alert alert-danger">
+                    <strong>❌ Error:</strong> {{ fixError }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   </div>
 </template>
 
 <script>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import Navbar from '@/components/Navbar.vue'
 import { useSettingsStore } from '@/stores/settings'
+import { useAuthStore } from '@/stores/auth'
+import api from '@/services/api'
 
 export default {
   name: 'SystemSettings',
   components: { Navbar },
   setup() {
     const settingsStore = useSettingsStore()
+    const authStore = useAuthStore()
+
+    // Check user role
+    const isAdministrator = computed(() => authStore.isAdministrator)
+    const isLandOfficer = computed(() => authStore.isLandOfficer)
 
     const settings = computed({
       get: () => settingsStore.$state,
@@ -400,12 +651,87 @@ export default {
       }
     }
 
+    // Debug Tools
+    const debugNationalId = ref('')
+    const debugLoading = ref(false)
+    const debugResults = ref(null)
+
+    const fixNationalId = ref('')
+    const fixLoading = ref(false)
+    const fixResults = ref(null)
+    const fixError = ref(null)
+
+    const checkOwnership = async () => {
+      if (!debugNationalId.value) {
+        alert('Please enter a National ID')
+        return
+      }
+
+      debugLoading.value = true
+      debugResults.value = null
+
+      try {
+        const response = await api.get(`/admin/debug-parcels?nationalId=${debugNationalId.value}`)
+        debugResults.value = response.data.data
+      } catch (err) {
+        console.error('Debug error:', err)
+        alert(err.response?.data?.message || 'Error checking ownership')
+      } finally {
+        debugLoading.value = false
+      }
+    }
+
+    const fixOwnership = async () => {
+      if (!fixNationalId.value) {
+        alert('Please enter a National ID')
+        return
+      }
+
+      if (!confirm(`Are you sure you want to fix ownership for National ID: ${fixNationalId.value}?\n\nThis will:\n- Consolidate all users with this National ID\n- Move all parcels to the active user\n- Remove placeholder/duplicate users`)) {
+        return
+      }
+
+      fixLoading.value = true
+      fixResults.value = null
+      fixError.value = null
+
+      try {
+        const response = await api.post('/admin/fix-ownership', {
+          nationalId: fixNationalId.value
+        })
+        fixResults.value = response.data
+        
+        // Clear the form
+        fixNationalId.value = ''
+        
+        // Show success message
+        alert('✅ Ownership fixed successfully! The user should now be able to see their parcels.')
+      } catch (err) {
+        console.error('Fix error:', err)
+        fixError.value = err.response?.data?.message || 'Error fixing ownership'
+      } finally {
+        fixLoading.value = false
+      }
+    }
+
     return {
       settings,
       lastSaved,
       saveSuccess,
       saveSettings,
-      resetToDefaults
+      resetToDefaults,
+      isAdministrator,
+      isLandOfficer,
+      // Debug tools
+      debugNationalId,
+      debugLoading,
+      debugResults,
+      checkOwnership,
+      fixNationalId,
+      fixLoading,
+      fixResults,
+      fixError,
+      fixOwnership
     }
   }
 }

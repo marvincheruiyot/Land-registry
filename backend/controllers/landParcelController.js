@@ -112,15 +112,67 @@ exports.getAllParcels = async (req, res, next) => {
 // Get user's own parcels
 exports.getUserParcels = async (req, res, next) => {
   try {
+    console.log('🔍 getUserParcels called for user:', {
+      userId: req.user._id,
+      userIdString: req.user._id.toString(),
+      userName: req.user.fullName,
+      nationalId: req.user.nationalId,
+      email: req.user.email
+    });
+
+    // First, let's check what parcels exist in the database
+    const allParcels = await LandParcel.find({})
+      .populate('currentOwner', 'fullName email nationalId')
+      .limit(5);
+    
+    console.log('📦 Sample parcels in database:');
+    allParcels.forEach((p, i) => {
+      console.log(`   Parcel ${i + 1}: ${p.parcelNumber}`);
+      console.log(`      Owner ID: ${p.currentOwner?._id}`);
+      console.log(`      Owner Name: ${p.currentOwner?.fullName}`);
+      console.log(`      Owner Email: ${p.currentOwner?.email}`);
+      console.log(`      Matches User: ${p.currentOwner?._id.toString() === req.user._id.toString()}`);
+    });
+
+    // Now find user's parcels
     const parcels = await LandParcel.find({ currentOwner: req.user._id })
       .populate('currentOwner', 'fullName email nationalId')
       .sort({ createdAt: -1 });
+
+    console.log(`📦 Found ${parcels.length} parcel(s) for user ${req.user.fullName} (${req.user._id})`);
+    
+    if (parcels.length > 0) {
+      parcels.forEach((p, i) => {
+        console.log(`   ✅ Parcel ${i + 1}: ${p.parcelNumber} - Owner: ${p.currentOwner?.fullName}`);
+      });
+    } else {
+      console.log(`   ❌ NO PARCELS FOUND for user ${req.user.fullName}`);
+      
+      // Let's check if there are parcels with this user's National ID
+      const parcelsByNationalId = await LandParcel.find({})
+        .populate('currentOwner', 'fullName email nationalId');
+      
+      const matchingByNationalId = parcelsByNationalId.filter(
+        p => p.currentOwner?.nationalId === req.user.nationalId
+      );
+      
+      if (matchingByNationalId.length > 0) {
+        console.log(`   ⚠️ FOUND ${matchingByNationalId.length} parcels by National ID, but owner IDs don't match!`);
+        matchingByNationalId.forEach((p, i) => {
+          console.log(`      Parcel ${i + 1}: ${p.parcelNumber}`);
+          console.log(`         Parcel Owner ID: ${p.currentOwner._id}`);
+          console.log(`         Logged in User ID: ${req.user._id}`);
+          console.log(`         IDs match: ${p.currentOwner._id.toString() === req.user._id.toString()}`);
+        });
+      }
+    }
 
     res.status(200).json({
       status: 'success',
       data: { parcels }
     });
   } catch (error) {
+    console.error('❌ Error in getUserParcels:', error);
     next(error);
   }
 };

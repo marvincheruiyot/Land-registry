@@ -610,8 +610,8 @@ export default {
     const fetchUserData = async () => {
       loading.value = true
       try {
-        // Fetch user's parcels
-        const parcelsRes = await api.get(`/land-parcels/user/${user.value.id}`)
+        // Fetch user's parcels using the correct endpoint
+        const parcelsRes = await api.get('/land-parcels/my-parcels')
         if (parcelsRes.data?.data?.parcels) {
           myParcels.value = parcelsRes.data.data.parcels
           stats.value.myParcels = myParcels.value.length

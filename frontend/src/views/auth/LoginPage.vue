@@ -12,18 +12,22 @@
 
       <form @submit.prevent="handleLogin" autocomplete="off">
         <div class="mb-3">
-          <label class="form-label fw-semibold text-dark small">Email Address</label>
+          <label class="form-label fw-semibold text-dark small">Email or National ID</label>
           <div class="position-relative">
-            <i class="bi bi-envelope text-muted position-absolute" style="left: 1rem; top: 50%; transform: translateY(-50%);"></i>
+            <i :class="['text-muted position-absolute', isNationalIdInput ? 'bi bi-person-vcard' : 'bi bi-envelope']" 
+               style="left: 1rem; top: 50%; transform: translateY(-50%);"></i>
             <input
-              v-model="form.email"
-              type="email"
+              v-model="form.emailOrNationalId"
+              type="text"
               class="form-control rounded-pill py-2 ps-5 bg-light border-0"
-              placeholder="e.g. admin@landregistry.go.ke"
+              :placeholder="isNationalIdInput ? 'e.g. 42207690' : 'e.g. admin@landregistry.go.ke'"
               autocomplete="off"
               required
             />
           </div>
+          <small class="text-muted d-block mt-1 ms-2">
+            You can login with your email address or National ID number
+          </small>
         </div>
 
         <div class="mb-3">
@@ -84,7 +88,7 @@
 </template>
 
 <script>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
@@ -96,19 +100,29 @@ export default {
     const authStore = useAuthStore()
 
     const form = ref({
-      email: '',
+      emailOrNationalId: '',
       password: ''
     })
     const showPassword = ref(false)
     const loading = ref(false)
     const error = ref(null)
 
+    // Detect if input looks like a National ID (numbers only)
+    const isNationalIdInput = computed(() => {
+      return /^\d+$/.test(form.value.emailOrNationalId)
+    })
+
     const handleLogin = async () => {
       loading.value = true
       error.value = null
 
       try {
-        await authStore.login(form.value)
+        // Determine if it's email or National ID
+        const loginData = isNationalIdInput.value
+          ? { nationalId: form.value.emailOrNationalId, password: form.value.password }
+          : { email: form.value.emailOrNationalId, password: form.value.password }
+
+        await authStore.login(loginData)
         
         // Redirect based on role
         if (authStore.isAdministrator) {
@@ -130,6 +144,7 @@ export default {
       showPassword,
       loading,
       error,
+      isNationalIdInput,
       handleLogin
     }
   }

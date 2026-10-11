@@ -23,4 +23,10 @@ router.get('/dashboard', adminController.getDashboardStats);
 router.get('/logs', adminController.getSystemLogs);
 router.put('/config', adminController.updateSystemConfig);
 
+// Fix parcel ownership (debugging/admin tool)
+router.post('/fix-ownership', adminController.fixParcelOwnership);
+
+// Debug: Check user and parcel status
+router.get('/debug-parcels', adminController.debugUserParcels);
+
 module.exports = router;

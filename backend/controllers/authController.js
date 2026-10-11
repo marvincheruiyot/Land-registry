@@ -136,17 +136,31 @@ exports.register = async (req, res, next) => {
 // @access  Public
 exports.login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { email, nationalId, password } = req.body;
+
+    // Build query to find user by email OR national ID
+    const query = email 
+      ? { email } 
+      : nationalId 
+        ? { nationalId } 
+        : null;
+
+    if (!query) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Please provide email or national ID'
+      });
+    }
 
     // Find user and include password field
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne(query).select('+password');
 
     if (!user) {
       // Log failed login attempt
       await AuditLog.log({
         user: null,
         action: 'LOGIN_FAILED',
-        description: `Failed login attempt for email: ${email}`,
+        description: `Failed login attempt for ${email ? 'email: ' + email : 'National ID: ' + nationalId}`,
         ipAddress: req.ip,
         userAgent: req.get('user-agent'),
         severity: 'warning'
