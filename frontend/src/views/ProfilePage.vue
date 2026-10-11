@@ -7,10 +7,10 @@
       <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
         <div>
           <div class="badge badge-pill-custom badge-soft-blue mb-2">
-            <i class="bi bi-person-badge-fill"></i> User Credentials & Security
+            <i class="bi bi-person-badge-fill"></i> My Profile
           </div>
-          <h1 class="fw-bold text-dark fs-2 mb-1">Account & Settings</h1>
-          <p class="text-muted mb-0">Manage authorized registrar profile, authentication credentials, and notifications.</p>
+          <h1 class="fw-bold text-dark fs-2 mb-1">Account Settings</h1>
+          <p class="text-muted mb-0">Manage your profile information and account security.</p>
         </div>
       </div>
 
@@ -23,8 +23,8 @@
             </div>
             <h4 class="fw-bold text-dark mb-1">{{ user?.fullName }}</h4>
             <p class="text-muted small mb-2">{{ user?.email }}</p>
-            <span class="badge badge-pill-custom badge-soft-green mb-4">
-              <i class="bi bi-patch-check-fill"></i> Verified {{ user?.role?.replace('_', ' ') }}
+            <span class="badge badge-pill-custom badge-soft-blue mb-4">
+              <i class="bi bi-person-fill"></i> {{ formatRole(user?.role) }}
             </span>
 
             <div class="d-flex flex-column gap-2 text-start pt-3 border-top">
@@ -40,16 +40,19 @@
               >
                 <i class="bi bi-shield-lock-fill"></i> Security & Password
               </button>
-              <button
-                @click="activeTab = 'notifications'"
-                :class="['btn btn-pill', activeTab === 'notifications' ? 'btn-dark-pill' : 'btn-light-pill']"
-              >
-                <i class="bi bi-bell-fill"></i> Preferences
-              </button>
             </div>
           </div>
 
-          <div class="dash-card card-dark">
+          <!-- Security Info Card (Only for Land Owners) -->
+          <div v-if="isLandOwner" class="dash-card bg-light">
+            <h6 class="fw-bold text-dark mb-2"><i class="bi bi-shield-check text-success"></i> Account Security</h6>
+            <p class="text-muted small mb-0">
+              Your account is secured with encrypted authentication. Keep your password safe and change it regularly.
+            </p>
+          </div>
+
+          <!-- Admin/Officer Security Card -->
+          <div v-else class="dash-card card-dark">
             <h6 class="fw-bold text-white mb-2">Security Clearance</h6>
             <p class="text-secondary small mb-3">
               Your account has full digital signing authority for Land Registration and Conveyancing.
@@ -64,12 +67,12 @@
         <div class="col-12 col-lg-8">
           <!-- Profile Form -->
           <div v-if="activeTab === 'profile'" class="dash-card">
-            <h5 class="fw-bold text-dark mb-4">Personal & Official Particulars</h5>
+            <h5 class="fw-bold text-dark mb-4">Personal Information</h5>
 
             <form @submit.prevent="updateProfile">
               <div class="row g-3">
                 <div class="col-12 col-md-6">
-                  <label class="form-label fw-semibold text-dark">Full Legal Name *</label>
+                  <label class="form-label fw-semibold text-dark">Full Name *</label>
                   <input v-model="profileForm.fullName" type="text" class="form-control rounded-pill py-2 bg-light border-0" required />
                 </div>
 
@@ -79,19 +82,19 @@
                 </div>
 
                 <div class="col-12 col-md-6">
-                  <label class="form-label fw-semibold text-dark">Phone Contact *</label>
+                  <label class="form-label fw-semibold text-dark">Phone Number *</label>
                   <input v-model="profileForm.phoneNumber" type="tel" class="form-control rounded-pill py-2 bg-light border-0" required />
                 </div>
 
                 <div class="col-12 col-md-6">
                   <label class="form-label fw-semibold text-dark">National ID Number</label>
                   <input v-model="profileForm.nationalId" type="text" class="form-control rounded-pill py-2 bg-light border-0" disabled />
-                  <small class="text-muted">National ID cannot be altered without physical registrar verification.</small>
+                  <small class="text-muted">National ID cannot be changed</small>
                 </div>
 
                 <div class="col-12">
-                  <label class="form-label fw-semibold text-dark">Physical Address / County Bureau</label>
-                  <textarea v-model="profileForm.physicalAddress" class="form-control rounded-4 bg-light border-0" rows="3" placeholder="Optional - Enter your physical address or county bureau location"></textarea>
+                  <label class="form-label fw-semibold text-dark">Physical Address</label>
+                  <textarea v-model="profileForm.physicalAddress" class="form-control rounded-4 bg-light border-0" rows="3" placeholder="Optional - Enter your physical address"></textarea>
                   <small class="text-muted">Optional field</small>
                 </div>
               </div>
@@ -102,7 +105,7 @@
 
               <div class="mt-4">
                 <button type="submit" :disabled="updating" class="btn btn-pill btn-dark-pill px-4">
-                  {{ updating ? 'Saving Changes...' : 'Save Profile Changes' }}
+                  {{ updating ? 'Saving...' : 'Save Changes' }}
                 </button>
               </div>
             </form>
@@ -110,7 +113,7 @@
 
           <!-- Security Form -->
           <div v-if="activeTab === 'security'" class="dash-card">
-            <h5 class="fw-bold text-dark mb-4">Update Password</h5>
+            <h5 class="fw-bold text-dark mb-4">Change Password</h5>
 
             <form @submit.prevent="changePassword">
               <div class="space-y-3">
@@ -122,7 +125,7 @@
                 <div class="mb-3">
                   <label class="form-label fw-semibold text-dark">New Password *</label>
                   <input v-model="passwordForm.newPassword" type="password" class="form-control rounded-pill py-2 bg-light border-0" required />
-                  <small class="text-muted">Must contain 8+ characters, including uppercase, lowercase, and special characters.</small>
+                  <small class="text-muted">Must be at least 8 characters with uppercase, lowercase, number, and special character</small>
                 </div>
 
                 <div class="mb-3">
@@ -137,47 +140,10 @@
 
               <div class="mt-4">
                 <button type="submit" :disabled="changingPassword" class="btn btn-pill btn-dark-pill px-4">
-                  {{ changingPassword ? 'Updating...' : 'Change Password' }}
+                  {{ changingPassword ? 'Updating...' : 'Update Password' }}
                 </button>
               </div>
             </form>
-          </div>
-
-          <!-- Preferences Tab -->
-          <div v-if="activeTab === 'notifications'" class="dash-card">
-            <h5 class="fw-bold text-dark mb-4">Notification & Audit Preferences</h5>
-
-            <div class="space-y-3">
-              <div class="p-3 bg-light rounded-4 d-flex justify-content-between align-items-center mb-3">
-                <div>
-                  <div class="fw-bold text-dark">Title Deed Conveyance Alerts</div>
-                  <div class="text-muted small">Receive instantaneous SMS & email alerts whenever a deed transfer is lodged.</div>
-                </div>
-                <div class="form-check form-switch fs-4">
-                  <input class="form-check-input" type="checkbox" checked />
-                </div>
-              </div>
-
-              <div class="p-3 bg-light rounded-4 d-flex justify-content-between align-items-center mb-3">
-                <div>
-                  <div class="fw-bold text-dark">Deed Verification Logs</div>
-                  <div class="text-muted small">Notify when third parties scan or verify your digital land titles.</div>
-                </div>
-                <div class="form-check form-switch fs-4">
-                  <input class="form-check-input" type="checkbox" checked />
-                </div>
-              </div>
-
-              <div class="p-3 bg-light rounded-4 d-flex justify-content-between align-items-center">
-                <div>
-                  <div class="fw-bold text-dark">Weekly Cadastral Digest</div>
-                  <div class="text-muted small">Receive weekly statistical breakdown of parcels in your county.</div>
-                </div>
-                <div class="form-check form-switch fs-4">
-                  <input class="form-check-input" type="checkbox" />
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -205,11 +171,18 @@ export default {
     const passwordSuccess = ref(false)
 
     const user = computed(() => authStore.user)
+    const isLandOwner = computed(() => authStore.isLandOwner)
+    
     const userInitials = computed(() => {
       if (!user.value?.fullName) return 'LR'
       const names = user.value.fullName.trim().split(' ')
       return names.map(n => n[0]).join('').toUpperCase().slice(0, 2)
     })
+
+    const formatRole = (role) => {
+      if (!role) return 'User'
+      return role.replace('_', ' ')
+    }
 
     const profileForm = ref({
       fullName: '',
@@ -289,7 +262,9 @@ export default {
     return {
       activeTab,
       user,
+      isLandOwner,
       userInitials,
+      formatRole,
       profileForm,
       passwordForm,
       updating,
