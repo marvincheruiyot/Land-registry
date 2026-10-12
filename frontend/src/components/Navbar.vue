@@ -465,6 +465,7 @@ export default {
         'PASSWORD_RESET': { icon: 'bi-shield-lock-fill', bgClass: 'bg-danger text-white' },
         'SUPPORT_REQUEST': { icon: 'bi-envelope-exclamation', bgClass: 'bg-danger text-white' },
         'SUPPORT_REQUEST_SUBMITTED': { icon: 'bi-envelope-check', bgClass: 'bg-success text-white' },
+        'SUPPORT_RESPONSE_RECEIVED': { icon: 'bi-reply-fill', bgClass: 'bg-info text-white' },
         'PLACEHOLDER_UPGRADED': { icon: 'bi-person-check-fill', bgClass: 'bg-success text-white' }
       }
       return icons[action] || { icon: 'bi-info-circle-fill', bgClass: 'bg-light text-dark' }
@@ -485,6 +486,7 @@ export default {
         'PASSWORD_RESET': 'Password Reset',
         'SUPPORT_REQUEST': 'Support Request Received',
         'SUPPORT_REQUEST_SUBMITTED': 'Support Request Submitted',
+        'SUPPORT_RESPONSE_RECEIVED': 'Support Response Received',
         'PLACEHOLDER_UPGRADED': 'Account Activated'
       }
       return titles[action] || 'System Activity'
