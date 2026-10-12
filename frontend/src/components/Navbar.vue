@@ -244,19 +244,19 @@
             </div>
 
             <li v-else v-for="notif in notifications" :key="notif._id" 
-                :class="['dropdown-item-text', notif.read ? '' : 'bg-primary-subtle']"
+                :class="['dropdown-item-text', notif.read || notif.isRead ? '' : 'bg-primary-subtle']"
                 style="cursor: pointer;"
-                @click="markAsRead(notif._id)">
+                @click="handleNotificationClick(notif)">
               <div class="d-flex gap-3 py-2 px-3">
-                <div :class="['avatar-circle flex-shrink-0', getNotificationIcon(notif.action).bgClass]" style="width: 40px; height: 40px;">
-                  <i :class="['bi', getNotificationIcon(notif.action).icon]"></i>
+                <div :class="['avatar-circle flex-shrink-0', getNotificationIcon(notif.action || notif.type).bgClass]" style="width: 40px; height: 40px;">
+                  <i :class="['bi', getNotificationIcon(notif.action || notif.type).icon]"></i>
                 </div>
                 <div class="flex-grow-1">
                   <div class="d-flex justify-content-between align-items-start mb-1">
-                    <strong class="small">{{ getNotificationTitle(notif.action) }}</strong>
+                    <strong class="small">{{ notif.title || getNotificationTitle(notif.action || notif.type) }}</strong>
                     <small class="text-muted">{{ formatTime(notif.createdAt) }}</small>
                   </div>
-                  <p class="small text-muted mb-0">{{ notif.description }}</p>
+                  <p class="small text-muted mb-0">{{ notif.message || notif.description }}</p>
                   <div v-if="notif.entityType" class="mt-1">
                     <span class="badge bg-light text-dark small">{{ notif.entityType }}</span>
                   </div>
@@ -351,39 +351,93 @@ export default {
     const fetchNotifications = async () => {
       loading.value = true
       try {
-        // Fetch only notifications for the current user
-        const response = await api.get(`/audit-logs?user=${user.value.id}&limit=20`)
-        if (response.data?.data?.logs) {
-          notifications.value = response.data.data.logs.map(log => ({
-            _id: log._id,
-            action: log.action,
-            description: log.description || log.details || 'System activity',
-            entityType: log.entityType || log.resourceType,
-            createdAt: log.createdAt,
-            read: false
+        // Fetch real notifications from the notifications API
+        const response = await api.get('/notifications?limit=20')
+        if (response.data?.data?.notifications) {
+          notifications.value = response.data.data.notifications.map(notif => ({
+            _id: notif._id,
+            type: notif.type,
+            title: notif.title,
+            message: notif.message,
+            action: notif.type, // Use type as action for compatibility
+            description: notif.message,
+            entityType: notif.relatedEntity?.entityType,
+            entityId: notif.relatedEntity?.entityId,
+            createdAt: notif.createdAt,
+            read: notif.isRead || false,
+            isRead: notif.isRead || false
           }))
           
-          // Count unread
-          unreadCount.value = notifications.value.filter(n => !n.read).length
+          // Get unread count from server
+          unreadCount.value = response.data.data.unreadCount || 0
         }
       } catch (err) {
         console.error('Error fetching notifications:', err)
+        // Fallback to audit logs if notifications fail
+        try {
+          const response = await api.get(`/audit-logs?user=${user.value.id}&limit=20`)
+          if (response.data?.data?.logs) {
+            notifications.value = response.data.data.logs.map(log => ({
+              _id: log._id,
+              action: log.action,
+              description: log.description || log.details || 'System activity',
+              entityType: log.entityType || log.resourceType,
+              createdAt: log.createdAt,
+              read: false
+            }))
+            unreadCount.value = notifications.value.filter(n => !n.read).length
+          }
+        } catch (fallbackErr) {
+          console.error('Error fetching audit logs:', fallbackErr)
+        }
       } finally {
         loading.value = false
       }
     }
 
-    const markAsRead = (notifId) => {
-      const notif = notifications.value.find(n => n._id === notifId)
-      if (notif) {
-        notif.read = true
-        unreadCount.value = notifications.value.filter(n => !n.read).length
+    const markAsRead = async (notifId) => {
+      try {
+        const response = await api.put(`/notifications/${notifId}/read`)
+        if (response.data?.status === 'success') {
+          // Update local state
+          const notif = notifications.value.find(n => n._id === notifId)
+          if (notif) {
+            notif.read = true
+            notif.isRead = true
+          }
+          // Update unread count from server response
+          if (response.data?.data?.unreadCount !== undefined) {
+            unreadCount.value = response.data.data.unreadCount
+          } else {
+            unreadCount.value = notifications.value.filter(n => !n.read && !n.isRead).length
+          }
+        }
+      } catch (err) {
+        console.error('Error marking as read:', err)
+        // Fallback to local update
+        const notif = notifications.value.find(n => n._id === notifId)
+        if (notif) {
+          notif.read = true
+          notif.isRead = true
+        }
+        unreadCount.value = notifications.value.filter(n => !n.read && !n.isRead).length
       }
     }
 
-    const markAllAsRead = () => {
-      notifications.value.forEach(n => n.read = true)
-      unreadCount.value = 0
+    const markAllAsRead = async () => {
+      try {
+        const response = await api.put('/notifications/mark-all-read')
+        if (response.data?.status === 'success') {
+          // Update local state
+          notifications.value.forEach(n => {
+            n.read = true
+            n.isRead = true
+          })
+          unreadCount.value = 0
+        }
+      } catch (err) {
+        console.error('Error marking all as read:', err)
+      }
     }
 
     const getNotificationIcon = (action) => {
@@ -424,6 +478,45 @@ export default {
         'PLACEHOLDER_UPGRADED': 'Account Activated'
       }
       return titles[action] || 'System Activity'
+    }
+
+    const handleNotificationClick = async (notif) => {
+      // Mark as read first
+      await markAsRead(notif._id)
+      
+      // Close dropdown
+      const dropdown = document.querySelector('.dropdown-menu.show')
+      if (dropdown) {
+        dropdown.classList.remove('show')
+      }
+      
+      // Navigate based on notification type
+      const notifType = notif.type || notif.action
+      
+      if (notifType === 'TRANSFER_INITIATED' || notifType === 'TRANSFER_APPROVED' || notifType === 'TRANSFER_REJECTED') {
+        // For land owners, go to my transfers
+        if (isLandOwner.value) {
+          router.push('/my-transfers')
+        } else {
+          // For admins/officers, go to transfers page
+          router.push('/transfers')
+        }
+      } else if (notifType === 'DOCUMENT_UPLOADED') {
+        // Navigate to documents page
+        if (isLandOwner.value) {
+          router.push('/my-documents')
+        } else {
+          router.push('/documents')
+        }
+      } else if (notifType === 'PARCEL_CREATED' || notifType === 'PARCEL_ASSIGNED') {
+        // Navigate to parcels page
+        if (isLandOwner.value) {
+          router.push('/my-parcels')
+        } else {
+          router.push('/parcels')
+        }
+      }
+      // For other types, just mark as read without navigation
     }
 
     const formatTime = (date) => {
@@ -504,6 +597,7 @@ export default {
       markAllAsRead,
       getNotificationIcon,
       getNotificationTitle,
+      handleNotificationClick,
       formatTime
     }
   }

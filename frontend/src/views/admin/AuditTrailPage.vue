@@ -164,7 +164,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="log in auditLogs" :key="log._id" style="border-bottom: 1px solid #f3f4f6;">
+              <tr v-for="log in displayedLogs" :key="log._id" style="border-bottom: 1px solid #f3f4f6;">
                 <td class="py-3">
                   <div class="small">{{ formatDate(log.createdAt) }}</div>
                   <small class="text-muted">{{ formatTime(log.createdAt) }}</small>
@@ -202,9 +202,65 @@
         </div>
 
         <!-- Pagination -->
-        <div v-if="auditLogs.length > 0" class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
-          <small class="text-muted">Showing {{ auditLogs.length }} of {{ auditTotal }} records</small>
-          <button class="btn btn-sm btn-light-pill">Load More</button>
+        <div v-if="auditLogs.length > 0" class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 mt-4 pt-3 border-top">
+          <div class="d-flex align-items-center gap-3">
+            <small class="text-muted">
+              Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to {{ Math.min(currentPage * itemsPerPage, auditTotal) }} of {{ auditTotal }} records
+            </small>
+            <div class="d-flex align-items-center gap-2">
+              <label class="text-muted small mb-0">Items per page:</label>
+              <select v-model.number="itemsPerPage" @change="changeItemsPerPage" class="form-select form-select-sm" style="width: auto;">
+                <option :value="10">10</option>
+                <option :value="20">20</option>
+                <option :value="50">50</option>
+                <option :value="100">100</option>
+              </select>
+            </div>
+          </div>
+          
+          <nav>
+            <ul class="pagination pagination-sm mb-0">
+              <li class="page-item" :class="{ disabled: currentPage === 1 }">
+                <button class="page-link" @click="goToPage(currentPage - 1)" :disabled="currentPage === 1">
+                  <i class="bi bi-chevron-left"></i>
+                </button>
+              </li>
+              
+              <li v-if="currentPage > 2" class="page-item">
+                <button class="page-link" @click="goToPage(1)">1</button>
+              </li>
+              
+              <li v-if="currentPage > 3" class="page-item disabled">
+                <span class="page-link">...</span>
+              </li>
+              
+              <li v-if="currentPage > 1" class="page-item">
+                <button class="page-link" @click="goToPage(currentPage - 1)">{{ currentPage - 1 }}</button>
+              </li>
+              
+              <li class="page-item active">
+                <span class="page-link">{{ currentPage }}</span>
+              </li>
+              
+              <li v-if="currentPage < totalPages" class="page-item">
+                <button class="page-link" @click="goToPage(currentPage + 1)">{{ currentPage + 1 }}</button>
+              </li>
+              
+              <li v-if="currentPage < totalPages - 2" class="page-item disabled">
+                <span class="page-link">...</span>
+              </li>
+              
+              <li v-if="currentPage < totalPages - 1" class="page-item">
+                <button class="page-link" @click="goToPage(totalPages)">{{ totalPages }}</button>
+              </li>
+              
+              <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+                <button class="page-link" @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages">
+                  <i class="bi bi-chevron-right"></i>
+                </button>
+              </li>
+            </ul>
+          </nav>
         </div>
       </div>
     </main>
@@ -226,6 +282,9 @@ export default {
     const actionFilter = ref('all')
     const severityFilter = ref('all')
     const dateRange = ref('all')
+    const currentPage = ref(1)
+    const itemsPerPage = ref(20)
+    const totalRecords = ref(0)
     
     const auditStats = ref({
       todayCount: 0,
@@ -233,7 +292,13 @@ export default {
       criticalCount: 0
     })
 
-    const auditTotal = computed(() => auditLogs.value.length)
+    const auditTotal = computed(() => totalRecords.value)
+    const totalPages = computed(() => Math.ceil(totalRecords.value / itemsPerPage.value))
+    const displayedLogs = computed(() => {
+      const start = (currentPage.value - 1) * itemsPerPage.value
+      const end = start + itemsPerPage.value
+      return auditLogs.value.slice(start, end)
+    })
 
     const hasFilters = computed(() => {
       return searchQuery.value || actionFilter.value !== 'all' || 
@@ -243,9 +308,10 @@ export default {
     const loadAuditLogs = async (forceRefresh = false) => {
       loading.value = true
       try {
-        const response = await api.get('/audit-logs?limit=100')
+        const response = await api.get('/audit-logs?limit=1000')
         if (response.data?.data?.logs) {
           auditLogs.value = response.data.data.logs
+          totalRecords.value = response.data.data.total || auditLogs.value.length
 
           // Calculate stats
           const now = new Date()
@@ -275,7 +341,18 @@ export default {
       actionFilter.value = 'all'
       severityFilter.value = 'all'
       dateRange.value = 'all'
+      currentPage.value = 1
       loadAuditLogs()
+    }
+
+    const goToPage = (page) => {
+      if (page >= 1 && page <= totalPages.value) {
+        currentPage.value = page
+      }
+    }
+
+    const changeItemsPerPage = () => {
+      currentPage.value = 1
     }
 
     const formatDate = (date) => {
@@ -312,15 +389,21 @@ export default {
     return {
       loading,
       auditLogs,
+      displayedLogs,
       searchQuery,
       actionFilter,
       severityFilter,
       dateRange,
       auditStats,
       auditTotal,
+      currentPage,
+      itemsPerPage,
+      totalPages,
       hasFilters,
       loadAuditLogs,
       resetFilters,
+      goToPage,
+      changeItemsPerPage,
       formatDate,
       formatTime,
       getSeverityClass

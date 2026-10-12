@@ -1,6 +1,7 @@
 const Transfer = require('../models/Transfer');
 const LandParcel = require('../models/LandParcel');
 const User = require('../models/User');
+const Notification = require('../models/Notification');
 
 // Initiate Transfer
 exports.initiateTransfer = async (req, res, next) => {
@@ -36,9 +37,32 @@ exports.initiateTransfer = async (req, res, next) => {
     // Update parcel status to pending_transfer
     await LandParcel.findByIdAndUpdate(landParcel, { status: 'pending_transfer' });
 
+    // Create notifications for all Administrators and Land Officers
+    const adminsAndOfficers = await User.find({
+      role: { $in: ['Administrator', 'Land_Officer'] },
+      isActive: true
+    });
+
+    const notificationPromises = adminsAndOfficers.map(user =>
+      Notification.create({
+        recipient: user._id,
+        type: 'TRANSFER_INITIATED',
+        title: 'New Transfer Request',
+        message: `Transfer request for parcel ${parcel.parcelNumber}. From: ${req.user.fullName} to ${newOwner.fullName}. Type: ${transferType}. Awaiting your approval.`,
+        relatedEntity: {
+          entityType: 'Transfer',
+          entityId: transfer._id
+        },
+        priority: 'high'
+      })
+    );
+
+    await Promise.all(notificationPromises);
+
     res.status(201).json({
       status: 'success',
-      data: { transfer }
+      data: { transfer },
+      message: `Transfer request submitted successfully. ${adminsAndOfficers.length} officers notified.`
     });
   } catch (error) {
     next(error);
@@ -69,21 +93,9 @@ exports.getAllTransfers = async (req, res, next) => {
       .populate('processedBy', 'fullName')
       .sort({ createdAt: -1 });
 
-    // Format for frontend
-    const formatted = transfers.map(t => ({
-      id: t._id,
-      parcelNumber: t.landParcel?.parcelNumber || 'Parcel',
-      previousOwner: t.previousOwner?.fullName || 'Previous Owner',
-      newOwner: t.newOwner?.fullName || 'New Owner',
-      transferType: t.transferType,
-      transferAmount: t.transferAmount,
-      status: t.status,
-      initiatedDate: t.createdAt ? new Date(t.createdAt).toLocaleDateString() : 'Recent'
-    }));
-
     res.status(200).json({
       status: 'success',
-      data: { transfers: formatted }
+      data: { transfers }
     });
   } catch (error) {
     next(error);

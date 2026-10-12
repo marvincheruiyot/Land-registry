@@ -18,6 +18,7 @@ const auditRoutes = require('./routes/auditRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const supportRoutes = require('./routes/supportRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
@@ -45,6 +46,9 @@ app.use(compression());
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static('uploads'));
 
 // Rate limiting
 const limiter = rateLimit({
@@ -76,6 +80,7 @@ app.use(`/api/${API_VERSION}/audit-logs`, auditRoutes);
 app.use(`/api/${API_VERSION}/reports`, reportRoutes);
 app.use(`/api/${API_VERSION}/admin`, adminRoutes);
 app.use(`/api/${API_VERSION}/support-tickets`, supportRoutes);
+app.use(`/api/${API_VERSION}/notifications`, notificationRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {

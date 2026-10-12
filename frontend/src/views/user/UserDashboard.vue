@@ -392,61 +392,102 @@
 
     <!-- Transfer Modal -->
     <div v-if="showTransferModal" class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
-      <div class="modal-dialog modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg">
-          <div class="modal-header border-0 pb-0">
+      <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+          <div class="modal-header border-0 pb-2">
             <div>
-              <h5 class="modal-title fw-bold">Initiate Land Transfer</h5>
-              <p class="text-muted small mb-0">Transfer ownership of your land</p>
+              <h5 class="modal-title fw-bold text-dark">
+                <i class="bi bi-arrow-left-right me-2 text-primary"></i>Initiate Land Transfer
+              </h5>
+              <p class="text-muted small mb-0">Transfer ownership of your land parcel</p>
             </div>
             <button type="button" class="btn-close" @click="closeTransferModal"></button>
           </div>
-          <div class="modal-body">
+          <div class="modal-body pt-2">
             <form @submit.prevent="submitTransfer">
               <div class="mb-3">
-                <label class="form-label fw-semibold">Select Your Parcel *</label>
-                <select v-model="transferForm.parcelId" class="form-select" required>
+                <label class="form-label fw-semibold text-dark">
+                  <i class="bi bi-map me-1"></i>Select Your Parcel *
+                </label>
+                <select v-model="transferForm.parcelId" class="form-select rounded-3 py-2" required>
                   <option value="">Choose a parcel...</option>
                   <option v-for="parcel in myParcels" :key="parcel._id" :value="parcel._id">
-                    {{ parcel.parcelNumber }} - {{ parcel.location?.county }}
+                    {{ parcel.parcelNumber }} - {{ parcel.location?.county }} ({{ parcel.sizeInAcres }} acres)
                   </option>
                 </select>
-              </div>
-              <div class="mb-3">
-                <label class="form-label fw-semibold">New Owner National ID *</label>
-                <input v-model="transferForm.newOwnerId" type="text" class="form-control" placeholder="12345678" required>
-              </div>
-              <div class="mb-3">
-                <label class="form-label fw-semibold">Transfer Type *</label>
-                <select v-model="transferForm.transferType" class="form-select" required>
-                  <option value="sale">Sale</option>
-                  <option value="gift">Gift</option>
-                  <option value="inheritance">Inheritance</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-              <div class="mb-3">
-                <label class="form-label fw-semibold">Transfer Fee (KES)</label>
-                <input v-model="transferForm.transferFee" type="number" step="0.01" class="form-control">
-              </div>
-              <div class="mb-3">
-                <label class="form-label fw-semibold">Notes</label>
-                <textarea v-model="transferForm.notes" class="form-control" rows="3"></textarea>
+                <small class="text-muted">Select the land parcel you wish to transfer</small>
               </div>
 
-              <div v-if="transferError" class="alert alert-danger mb-0">
-                {{ transferError }}
+              <div class="mb-3">
+                <label class="form-label fw-semibold text-dark">
+                  <i class="bi bi-person-badge me-1"></i>New Owner National ID *
+                </label>
+                <input 
+                  v-model="transferForm.newOwnerId" 
+                  type="text" 
+                  class="form-control rounded-3 py-2" 
+                  placeholder="e.g., 12345678" 
+                  required
+                  maxlength="8"
+                  pattern="[0-9]{8}"
+                >
+                <small class="text-muted">Enter the 8-digit National ID of the new owner</small>
               </div>
-              <div v-if="transferSuccess" class="alert alert-success mb-0">
-                {{ transferSuccess }}
+
+              <div class="mb-3">
+                <label class="form-label fw-semibold text-dark">
+                  <i class="bi bi-tag me-1"></i>Transfer Type *
+                </label>
+                <select v-model="transferForm.transferType" class="form-select rounded-3 py-2" required>
+                  <option value="">Select transfer type...</option>
+                  <option value="sale">Sale - Purchased property</option>
+                  <option value="gift">Gift - Family transfer</option>
+                  <option value="inheritance">Inheritance - Succession</option>
+                  <option value="court_order">Court Order</option>
+                </select>
+                <small class="text-muted">Choose the reason for this transfer</small>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-semibold text-dark">
+                  <i class="bi bi-pencil me-1"></i>Additional Notes (Optional)
+                </label>
+                <textarea 
+                  v-model="transferForm.notes" 
+                  class="form-control rounded-3" 
+                  rows="3"
+                  placeholder="Add any relevant information about this transfer..."
+                ></textarea>
+                <small class="text-muted">Provide any additional details or context</small>
+              </div>
+
+              <div v-if="transferError" class="alert alert-danger d-flex align-items-center rounded-3 mb-3">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <div>{{ transferError }}</div>
+              </div>
+              
+              <div v-if="transferSuccess" class="alert alert-success d-flex align-items-center rounded-3 mb-3">
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <div>{{ transferSuccess }}</div>
+              </div>
+
+              <div class="alert alert-info d-flex align-items-start rounded-3 mb-0">
+                <i class="bi bi-info-circle-fill me-2 mt-1"></i>
+                <small>
+                  <strong>Important:</strong> Once submitted, your transfer request will be reviewed by land officers. 
+                  You will be notified when it's approved or if additional information is needed.
+                </small>
               </div>
             </form>
           </div>
-          <div class="modal-footer border-0">
-            <button type="button" class="btn btn-light" @click="closeTransferModal">Cancel</button>
-            <button type="button" class="btn btn-dark" @click="submitTransfer" :disabled="transferLoading">
+          <div class="modal-footer border-0 bg-light rounded-bottom-4">
+            <button type="button" class="btn btn-light rounded-pill px-4" @click="closeTransferModal">
+              <i class="bi bi-x-circle me-1"></i>Cancel
+            </button>
+            <button type="button" class="btn btn-dark rounded-pill px-4" @click="submitTransfer" :disabled="transferLoading">
               <span v-if="transferLoading" class="spinner-border spinner-border-sm me-2"></span>
-              Submit Transfer
+              <i v-else class="bi bi-send-fill me-1"></i>
+              {{ transferLoading ? 'Submitting...' : 'Submit Transfer' }}
             </button>
           </div>
         </div>
@@ -681,23 +722,24 @@ export default {
       transferSuccess.value = null
 
       try {
-        const parcel = myParcels.value.find(p => p._id === transferForm.value.parcelId)
-        
         await api.post('/transfers', {
-          parcelNumber: parcel.parcelNumber,
+          landParcel: transferForm.value.parcelId,
           newOwnerNationalId: transferForm.value.newOwnerId,
           transferType: transferForm.value.transferType,
-          transferFee: transferForm.value.transferFee ? parseFloat(transferForm.value.transferFee) : undefined,
-          notes: transferForm.value.notes
+          notes: transferForm.value.notes || ''
         })
 
-        transferSuccess.value = 'Transfer request submitted successfully!'
+        transferSuccess.value = 'Transfer request submitted successfully! Admins and officers have been notified.'
         setTimeout(() => {
           closeTransferModal()
           fetchUserData()
-        }, 1500)
+        }, 2000)
       } catch (err) {
-        transferError.value = err.response?.data?.message || 'Failed to submit transfer'
+        transferError.value = err.response?.data?.message || 'Failed to submit transfer request. Please try again.'
+        // Auto-close modal after 3 seconds even on error
+        setTimeout(() => {
+          closeTransferModal()
+        }, 3000)
       } finally {
         transferLoading.value = false
       }
@@ -708,8 +750,7 @@ export default {
       transferForm.value = {
         parcelId: '',
         newOwnerId: '',
-        transferType: 'sale',
-        transferFee: '',
+        transferType: '',
         notes: ''
       }
       transferError.value = null

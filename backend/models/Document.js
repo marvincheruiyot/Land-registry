@@ -53,6 +53,11 @@ const documentSchema = new mongoose.Schema({
     }
   },
   verificationToken: String,
+  verificationStatus: {
+    type: String,
+    enum: ['pending', 'verified', 'rejected'],
+    default: 'pending'
+  },
   version: {
     type: Number,
     default: 1
