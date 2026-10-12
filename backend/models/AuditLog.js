@@ -4,35 +4,28 @@ const auditLogSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: false,
+    default: null
   },
   action: {
     type: String,
-    required: [true, 'Action is required'],
-    enum: [
-      'LOGIN', 'LOGOUT', 'LOGIN_FAILED',
-      'USER_CREATED', 'USER_UPDATED', 'USER_DELETED', 'USER_DEACTIVATED',
-      'PARCEL_CREATED', 'PARCEL_UPDATED', 'PARCEL_DELETED', 'PARCEL_FLAGGED',
-      'TRANSFER_INITIATED', 'TRANSFER_APPROVED', 'TRANSFER_REJECTED', 'TRANSFER_CANCELLED',
-      'DOCUMENT_UPLOADED', 'DOCUMENT_VIEWED', 'DOCUMENT_DOWNLOADED', 'DOCUMENT_DELETED',
-      'VERIFICATION_PERFORMED',
-      'REPORT_GENERATED',
-      'SYSTEM_CONFIG_CHANGED',
-      'PASSWORD_CHANGED', 'PASSWORD_RESET',
-      'EMAIL_SENT',
-      'SUSPICIOUS_ACTIVITY'
-    ]
+    required: [true, 'Action is required']
   },
   entityType: {
     type: String,
-    enum: ['User', 'LandParcel', 'Transfer', 'Document', 'System', null]
+    default: null
   },
   entityId: {
-    type: mongoose.Schema.Types.ObjectId
+    type: mongoose.Schema.Types.Mixed,
+    default: null
   },
   description: {
     type: String,
-    required: true
+    default: ''
+  },
+  details: {
+    type: String,
+    default: ''
   },
   changes: {
     before: mongoose.Schema.Types.Mixed,
@@ -40,9 +33,12 @@ const auditLogSchema = new mongoose.Schema({
   },
   ipAddress: {
     type: String,
-    required: true
+    default: '127.0.0.1'
   },
-  userAgent: String,
+  userAgent: {
+    type: String,
+    default: ''
+  },
   severity: {
     type: String,
     enum: ['info', 'warning', 'error', 'critical'],
@@ -51,11 +47,27 @@ const auditLogSchema = new mongoose.Schema({
   metadata: mongoose.Schema.Types.Mixed,
   timestamp: {
     type: Date,
-    default: Date.now,
-    required: true
+    default: Date.now
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
   }
 }, {
-  timestamps: false
+  timestamps: true
+});
+
+auditLogSchema.pre('save', function(next) {
+  if (!this.description && this.details) {
+    this.description = this.details;
+  }
+  if (!this.description) {
+    this.description = `Activity recorded: ${this.action}`;
+  }
+  if (!this.timestamp) {
+    this.timestamp = this.createdAt || new Date();
+  }
+  next();
 });
 
 // Indexes for efficient querying
@@ -72,7 +84,13 @@ auditLogSchema.index({ timestamp: 1 }, { expireAfterSeconds: 3650 * 24 * 60 * 60
 // Static method to create audit log entry
 auditLogSchema.statics.log = async function(logData) {
   try {
-    await this.create(logData);
+    const payload = { ...logData };
+    if (!payload.entityType && payload.resourceType) payload.entityType = payload.resourceType;
+    if (!payload.entityId && payload.resourceId) payload.entityId = payload.resourceId;
+    if (!payload.description && payload.details) payload.description = payload.details;
+    if (!payload.description) payload.description = `Action recorded: ${payload.action || 'ACTIVITY'}`;
+    if (!payload.ipAddress) payload.ipAddress = '127.0.0.1';
+    await this.create(payload);
   } catch (error) {
     console.error('Failed to create audit log:', error);
     // Don't throw error to prevent disrupting main application flow

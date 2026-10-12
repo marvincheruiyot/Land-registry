@@ -147,6 +147,12 @@ const routes = [
     meta: { requiresAuth: true, roles: ['Administrator'] }
   },
   {
+    path: '/audit-trail',
+    name: 'AuditTrail',
+    component: () => import('@/views/admin/AuditTrailPage.vue'),
+    meta: { requiresAuth: true, roles: ['Administrator'] }
+  },
+  {
     path: '/settings',
     name: 'SystemSettings',
     component: () => import('@/views/admin/SystemSettings.vue'),

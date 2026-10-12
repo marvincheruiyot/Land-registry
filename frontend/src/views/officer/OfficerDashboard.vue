@@ -392,63 +392,141 @@
         </div>
       </div>
 
-      <!-- Recent Activity & Parcels Grid -->
+      <!-- Recently Registered Parcels Section -->
       <div class="dash-card">
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
           <div>
-            <h5 class="fw-bold mb-1">Recently Registered Parcels</h5>
-            <small class="text-muted">Latest additions to the land registry</small>
+            <h5 class="fw-bold mb-1">
+              <i class="bi bi-map-fill me-2 text-primary"></i>Recently Registered Parcels
+            </h5>
+            <small class="text-muted">Latest additions to the national land registry</small>
           </div>
-          <router-link to="/parcels" class="btn btn-sm btn-dark">
-            <i class="bi bi-grid-fill me-1"></i>View All Parcels
-          </router-link>
+          <div class="d-flex gap-2">
+            <router-link to="/parcels" class="btn btn-sm btn-dark px-3">
+              <i class="bi bi-grid-3x3-gap-fill me-1"></i>View All Parcels
+            </router-link>
+            <router-link to="/parcels/create" class="btn btn-sm btn-warning text-dark px-3">
+              <i class="bi bi-plus-circle-fill me-1"></i>Register New
+            </router-link>
+          </div>
         </div>
 
         <div v-if="loadingParcels" class="text-center py-5">
           <div class="spinner-border text-primary" role="status"></div>
+          <p class="text-muted mt-2 small">Loading registry data...</p>
         </div>
 
         <div v-else-if="recentParcels.length === 0" class="text-center py-5">
-          <i class="bi bi-inbox fs-1 text-muted mb-3 d-block"></i>
-          <p class="text-muted">No parcels registered yet</p>
+          <div class="avatar-circle bg-light text-muted mx-auto mb-3" style="width: 64px; height: 64px; font-size: 1.5rem;">
+            <i class="bi bi-inbox"></i>
+          </div>
+          <h6 class="fw-bold text-dark mb-2">No Parcels Registered Yet</h6>
+          <p class="text-muted small mb-3">Start by registering your first land parcel to the national registry</p>
+          <router-link to="/parcels/create" class="btn btn-sm btn-warning text-dark">
+            <i class="bi bi-plus-circle me-1"></i>Register First Parcel
+          </router-link>
         </div>
 
         <div v-else class="table-responsive">
-          <table class="table table-hover align-middle mb-0">
+          <table class="table table-hover align-middle mb-0 parcels-table">
             <thead>
-              <tr style="border-bottom: 2px solid #e5e7eb;">
-                <th class="py-3 text-muted fw-semibold text-uppercase" style="font-size: 0.75rem;">Parcel Number</th>
-                <th class="py-3 text-muted fw-semibold text-uppercase" style="font-size: 0.75rem;">Owner</th>
-                <th class="py-3 text-muted fw-semibold text-uppercase" style="font-size: 0.75rem;">Location</th>
-                <th class="py-3 text-muted fw-semibold text-uppercase" style="font-size: 0.75rem;">Size</th>
-                <th class="py-3 text-muted fw-semibold text-uppercase" style="font-size: 0.75rem;">Land Use</th>
-                <th class="py-3 text-muted fw-semibold text-uppercase" style="font-size: 0.75rem;">Registered</th>
+              <tr class="border-bottom-2">
+                <th class="py-3 text-muted fw-semibold text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">
+                  <i class="bi bi-hash me-1"></i>Parcel Number
+                </th>
+                <th class="py-3 text-muted fw-semibold text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">
+                  <i class="bi bi-person me-1"></i>Owner
+                </th>
+                <th class="py-3 text-muted fw-semibold text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">
+                  <i class="bi bi-geo-alt me-1"></i>Location
+                </th>
+                <th class="py-3 text-muted fw-semibold text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">
+                  <i class="bi bi-rulers me-1"></i>Size
+                </th>
+                <th class="py-3 text-muted fw-semibold text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">
+                  <i class="bi bi-tree me-1"></i>Land Use
+                </th>
+                <th class="py-3 text-muted fw-semibold text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.5px;">
+                  <i class="bi bi-calendar-event me-1"></i>Registered
+                </th>
+                <th class="py-3 text-muted fw-semibold text-uppercase text-end" style="font-size: 0.7rem; letter-spacing: 0.5px;">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="parcel in recentParcels.slice(0, 8)" :key="parcel._id" style="border-bottom: 1px solid #f3f4f6;">
+              <tr v-for="(parcel, index) in recentParcels.slice(0, 8)" :key="parcel._id" class="border-bottom parcel-row">
                 <td class="py-3">
-                  <div class="fw-semibold" style="font-size: 0.9rem;">{{ parcel.parcelNumber }}</div>
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="avatar-circle bg-primary bg-opacity-10 text-primary flex-shrink-0" style="width: 36px; height: 36px; font-size: 0.75rem;">
+                      {{ index + 1 }}
+                    </div>
+                    <div>
+                      <div class="fw-bold text-dark" style="font-size: 0.9rem;">{{ parcel.parcelNumber }}</div>
+                      <small class="text-muted" v-if="parcel.titleDeedNumber">{{ parcel.titleDeedNumber }}</small>
+                    </div>
+                  </div>
                 </td>
                 <td class="py-3">
-                  <div style="font-size: 0.85rem;">{{ parcel.currentOwner?.fullName || 'N/A' }}</div>
-                  <small class="text-muted">ID: {{ parcel.currentOwner?.nationalId }}</small>
+                  <div class="d-flex align-items-center gap-2">
+                    <div class="avatar-circle bg-dark text-warning flex-shrink-0" style="width: 32px; height: 32px; font-size: 0.7rem;">
+                      {{ parcel.currentOwner?.fullName?.charAt(0) || '?' }}
+                    </div>
+                    <div>
+                      <div class="fw-semibold text-dark" style="font-size: 0.85rem;">{{ parcel.currentOwner?.fullName || 'N/A' }}</div>
+                      <small class="text-muted">ID: {{ parcel.currentOwner?.nationalId || 'Unknown' }}</small>
+                    </div>
+                  </div>
                 </td>
                 <td class="py-3">
-                  <span class="badge bg-light text-dark px-2 py-1">{{ parcel.location?.county }}</span>
+                  <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-geo-alt-fill text-primary"></i>
+                    <div>
+                      <div class="badge bg-primary bg-opacity-10 text-primary px-2 py-1 fw-semibold">
+                        {{ parcel.location?.county || 'N/A' }}
+                      </div>
+                      <div v-if="parcel.location?.subCounty" class="text-muted small mt-1">
+                        {{ parcel.location.subCounty }}
+                      </div>
+                    </div>
+                  </div>
                 </td>
                 <td class="py-3">
-                  <span style="font-size: 0.85rem;">{{ parcel.sizeInAcres }} acres</span>
+                  <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-rulers text-success"></i>
+                    <div>
+                      <div class="fw-bold text-dark" style="font-size: 0.9rem;">{{ parcel.sizeInAcres }}</div>
+                      <small class="text-muted">acres</small>
+                    </div>
+                  </div>
                 </td>
                 <td class="py-3">
-                  <span class="text-capitalize" style="font-size: 0.85rem;">{{ parcel.landUse }}</span>
+                  <span class="badge bg-light text-dark border px-3 py-2 text-capitalize" style="font-size: 0.8rem;">
+                    <i class="bi bi-tree me-1"></i>{{ parcel.landUse || 'Unknown' }}
+                  </span>
                 </td>
                 <td class="py-3">
-                  <small class="text-muted">{{ formatDate(parcel.createdAt) }}</small>
+                  <div class="text-muted" style="font-size: 0.85rem;">
+                    <i class="bi bi-calendar3 me-1"></i>{{ formatDate(parcel.createdAt) }}
+                  </div>
+                </td>
+                <td class="py-3 text-end">
+                  <button @click="viewParcelDetails(parcel)" class="btn btn-sm btn-light border px-3" title="View Details">
+                    <i class="bi bi-eye"></i>
+                  </button>
                 </td>
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <div v-if="recentParcels.length > 8" class="text-center pt-4 mt-4 border-top">
+          <p class="text-muted small mb-3">
+            Showing 8 of {{ recentParcels.length }} total parcels
+          </p>
+          <router-link to="/parcels" class="btn btn-sm btn-dark-pill px-4">
+            <i class="bi bi-grid-3x3-gap me-2"></i>View All {{ recentParcels.length }} Parcels
+          </router-link>
         </div>
       </div>
     </main>
@@ -653,6 +731,10 @@ export default {
       router.push(`/transfers/${transfer._id}`)
     }
 
+    const viewParcelDetails = (parcel) => {
+      router.push(`/parcels/${parcel._id}`)
+    }
+
     const formatDate = (date) => {
       if (!date) return 'N/A'
       return new Date(date).toLocaleDateString('en-KE', {
@@ -691,6 +773,7 @@ export default {
       transferStats,
       filteredTransfers,
       reviewTransfer,
+      viewParcelDetails,
       formatDate,
       fetchDashboardData,
       getStatusBadgeClass
@@ -706,6 +789,44 @@ export default {
 
 .table tbody tr:hover {
   background-color: #f9fafb;
+}
+
+.parcels-table .parcel-row {
+  transition: all 0.3s ease;
+}
+
+.parcels-table .parcel-row:hover {
+  background-color: #f8f9fa;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
+}
+
+.parcels-table .border-bottom-2 {
+  border-bottom: 2px solid #dee2e6 !important;
+}
+
+.parcels-table thead th {
+  background-color: #f8f9fa;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.btn-dark-pill {
+  background: linear-gradient(135deg, #212529 0%, #343a40 100%);
+  border: none;
+  color: white;
+  border-radius: 50rem;
+  padding: 0.5rem 1.5rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-dark-pill:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  background: linear-gradient(135deg, #343a40 0%, #495057 100%);
+  color: white;
 }
 
 .activity-feed {

@@ -115,6 +115,16 @@
 
           <router-link
             v-if="isAdministrator"
+            to="/audit-trail"
+            class="sidebar-nav-item text-decoration-none"
+            active-class="active"
+          >
+            <i class="bi bi-shield-check"></i>
+            <span>Audit Trail</span>
+          </router-link>
+
+          <router-link
+            v-if="isAdministrator"
             to="/settings"
             class="sidebar-nav-item text-decoration-none"
             active-class="active"

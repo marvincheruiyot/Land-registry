@@ -251,6 +251,74 @@
         </div>
       </div>
 
+      <!-- Real-Time Audit Trail & Security Ledger Strip -->
+      <div class="dash-card mb-4">
+        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3 mb-3">
+          <div>
+            <div class="d-flex align-items-center gap-2">
+              <h5 class="fw-bold mb-0">System Audit Trail & Cryptographic Telemetry</h5>
+              <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 small">
+                <i class="bi bi-circle-fill text-success me-1 pulse-dot" style="font-size: 0.5rem;"></i> Live
+              </span>
+            </div>
+            <small class="text-muted">Real-time tamper-evident log of registrar operations, deed updates, and security events</small>
+          </div>
+          <router-link to="/audit-trail" class="btn btn-pill btn-dark-pill btn-sm">
+            <i class="bi bi-shield-check me-1"></i> Full Audit Trail
+          </router-link>
+        </div>
+
+        <div v-if="recentAuditLogs.length === 0" class="text-center py-4 bg-light rounded-4">
+          <i class="bi bi-shield-check fs-2 text-muted mb-2 d-block"></i>
+          <p class="text-muted small mb-0">All systems secure. No anomalous security incidents recorded.</p>
+        </div>
+
+        <div v-else class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="text-muted small">
+              <tr>
+                <th scope="col" class="border-0 pb-2">TIME</th>
+                <th scope="col" class="border-0 pb-2">ACTION</th>
+                <th scope="col" class="border-0 pb-2">ACTOR</th>
+                <th scope="col" class="border-0 pb-2">EVENT DESCRIPTION</th>
+                <th scope="col" class="border-0 pb-2">SEVERITY</th>
+                <th scope="col" class="border-0 pb-2 text-end">ORIGIN IP</th>
+              </tr>
+            </thead>
+            <tbody class="border-top-0">
+              <tr v-for="(log, idx) in recentAuditLogs" :key="log._id || idx">
+                <td>
+                  <small class="fw-semibold text-dark">{{ formatRelativeTime(log.timestamp || log.createdAt) }}</small>
+                </td>
+                <td>
+                  <span :class="['badge badge-pill-custom', getActionBadgeClass(log.action)]">
+                    <i :class="getActionIcon(log.action)" class="me-1"></i>
+                    {{ formatActionName(log.action) }}
+                  </span>
+                </td>
+                <td>
+                  <div class="fw-semibold text-dark small">{{ log.user?.fullName || 'System Daemon' }}</div>
+                  <small class="text-muted">{{ log.user?.role ? log.user.role.replace('_', ' ') : 'Automated' }}</small>
+                </td>
+                <td>
+                  <div class="small text-dark text-truncate" style="max-width: 320px;">
+                    {{ log.description || log.details || 'Activity registered' }}
+                  </div>
+                </td>
+                <td>
+                  <span :class="['badge badge-pill-custom', getSeverityBadgeClass(log.severity)]">
+                    {{ (log.severity || 'info').toUpperCase() }}
+                  </span>
+                </td>
+                <td class="text-end">
+                  <code class="small text-muted">{{ log.ipAddress || '127.0.0.1' }}</code>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- Quick Execution Strip (Nikitin Dribbble pill-style action buttons) -->
       <div class="dash-card">
         <h5 class="fw-bold mb-3">Instant Operational Shortcuts</h5>
@@ -292,13 +360,13 @@
           </div>
 
           <div class="col-12 col-sm-6 col-md-3">
-            <router-link to="/reports" class="p-3 bg-light rounded-4 text-decoration-none d-flex align-items-center gap-3 h-100 hover-elevate">
-              <div class="avatar-circle bg-success text-white">
-                <i class="bi bi-file-earmark-bar-graph fs-5"></i>
+            <router-link to="/audit-trail" class="p-3 bg-light rounded-4 text-decoration-none d-flex align-items-center gap-3 h-100 hover-elevate">
+              <div class="avatar-circle bg-dark text-warning">
+                <i class="bi bi-shield-check fs-5"></i>
               </div>
               <div>
-                <div class="fw-bold text-dark">Export Audit</div>
-                <small class="text-muted">Generate PDF/CSV reports</small>
+                <div class="fw-bold text-dark">Audit Trail</div>
+                <small class="text-muted">Explore security ledger</small>
               </div>
             </router-link>
           </div>
@@ -331,6 +399,7 @@ export default {
     })
 
     const recentTransfers = ref([])
+    const recentAuditLogs = ref([])
     const parcelCategories = ref({
       residential: 0,
       commercial: 0,
@@ -340,9 +409,10 @@ export default {
 
     const fetchDashboardData = async () => {
       try {
-        const [parcelsRes, transfersRes] = await Promise.allSettled([
+        const [parcelsRes, transfersRes, auditRes] = await Promise.allSettled([
           api.get('/parcels'),
-          api.get('/transfers?limit=4')
+          api.get('/transfers?limit=4'),
+          api.get('/audit-logs?limit=5')
         ])
 
         if (parcelsRes.status === 'fulfilled' && parcelsRes.value?.data?.data) {
@@ -379,6 +449,10 @@ export default {
           }))
         }
 
+        if (auditRes.status === 'fulfilled' && auditRes.value?.data?.data) {
+          recentAuditLogs.value = auditRes.value.data.data.logs || []
+        }
+
         // Set documents count (parcels * 2 as estimate)
         stats.value.documentsCount = stats.value.parcelsCount * 2
       } catch (err) {
@@ -406,6 +480,62 @@ export default {
       return parcelCategories.value.total > 0 ? 100 : 0
     })
 
+    const formatRelativeTime = (dateVal) => {
+      if (!dateVal) return ''
+      try {
+        const now = Date.now()
+        const diff = Math.floor((now - new Date(dateVal).getTime()) / 1000)
+        if (diff < 60) return `${diff}s ago`
+        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+        if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+        return `${Math.floor(diff / 86400)}d ago`
+      } catch (e) {
+        return ''
+      }
+    }
+
+    const formatActionName = (action) => {
+      if (!action) return 'Activity'
+      return action.replace(/_/g, ' ')
+    }
+
+    const getActionBadgeClass = (action) => {
+      const act = (action || '').toUpperCase()
+      if (act.includes('LOGIN_FAILED') || act.includes('DELETED') || act.includes('REJECTED')) {
+        return 'badge-soft-red'
+      }
+      if (act.includes('LOGIN') || act.includes('APPROVED') || act.includes('ACTIVATE')) {
+        return 'badge-soft-green'
+      }
+      if (act.includes('PARCEL') || act.includes('TRANSFER')) {
+        return 'badge-soft-yellow'
+      }
+      return 'badge-soft-blue'
+    }
+
+    const getActionIcon = (action) => {
+      const act = (action || '').toUpperCase()
+      if (act.includes('LOGIN_FAILED')) return 'bi bi-shield-x'
+      if (act.includes('LOGIN')) return 'bi bi-box-arrow-in-right'
+      if (act.includes('LOGOUT')) return 'bi bi-box-arrow-right'
+      if (act.includes('PARCEL')) return 'bi bi-map'
+      if (act.includes('TRANSFER')) return 'bi bi-arrow-left-right'
+      if (act.includes('DOCUMENT')) return 'bi bi-file-earmark-lock2'
+      return 'bi bi-activity'
+    }
+
+    const getSeverityBadgeClass = (severity) => {
+      switch ((severity || '').toLowerCase()) {
+        case 'critical':
+        case 'error':
+          return 'badge-soft-red'
+        case 'warning':
+          return 'badge-soft-yellow'
+        default:
+          return 'badge-soft-blue'
+      }
+    }
+
     onMounted(() => {
       fetchDashboardData()
     })
@@ -416,11 +546,17 @@ export default {
       isAdministrator,
       stats,
       recentTransfers,
+      recentAuditLogs,
       parcelCategories,
       residentialPercentage,
       commercialPercentage,
       agriculturalPercentage,
-      digitalizationPercentage
+      digitalizationPercentage,
+      formatRelativeTime,
+      formatActionName,
+      getActionBadgeClass,
+      getActionIcon,
+      getSeverityBadgeClass
     }
   }
 }
@@ -439,5 +575,15 @@ export default {
 .btn-check:checked + .btn-outline-secondary {
   background-color: #212529;
   color: white;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(0.8); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.pulse-dot {
+  display: inline-block;
+  animation: pulse 1.8s infinite ease-in-out;
 }
 </style>

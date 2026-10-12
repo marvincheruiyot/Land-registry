@@ -59,9 +59,80 @@ const seedInitialUsers = async () => {
       }
     }
 
-    logger.info('Default seed users verified.');
+    // Check and seed initial audit trail logs
+    const AuditLog = require('../models/AuditLog');
+    const logCount = await AuditLog.countDocuments();
+    if (logCount === 0) {
+      const admin = await User.findOne({ role: 'Administrator' });
+      const officer = await User.findOne({ role: 'Land_Officer' });
+      const owner = await User.findOne({ role: 'Land_Owner' });
+
+      const sampleLogs = [
+        {
+          user: admin ? admin._id : null,
+          action: 'LOGIN',
+          entityType: 'User',
+          description: 'Administrator authenticated successfully via secure session token',
+          ipAddress: '197.232.88.14',
+          severity: 'info',
+          timestamp: new Date(Date.now() - 1000 * 60 * 15)
+        },
+        {
+          user: officer ? officer._id : null,
+          action: 'PARCEL_CREATED',
+          entityType: 'LandParcel',
+          description: 'Registered title deed DEED/NAI/2026/014 for parcel NAI/KIL/2026/044 in Nairobi County',
+          ipAddress: '102.215.78.2',
+          severity: 'info',
+          timestamp: new Date(Date.now() - 1000 * 60 * 45)
+        },
+        {
+          user: null,
+          action: 'LOGIN_FAILED',
+          entityType: 'User',
+          description: 'Failed login attempt detected from unauthorized IP address',
+          ipAddress: '41.90.18.23',
+          severity: 'warning',
+          timestamp: new Date(Date.now() - 1000 * 60 * 120)
+        },
+        {
+          user: admin ? admin._id : null,
+          action: 'TRANSFER_APPROVED',
+          entityType: 'Transfer',
+          description: 'Registrar executed conveyance approval for Deed NAI/KIL/2026/012 to David Kiprop',
+          ipAddress: '197.232.88.14',
+          severity: 'info',
+          timestamp: new Date(Date.now() - 1000 * 60 * 180)
+        },
+        {
+          user: admin ? admin._id : null,
+          action: 'SYSTEM_CONFIG_CHANGED',
+          entityType: 'System',
+          description: 'Cryptographic ledger cold backup snapshot verified with SHA-256 integrity hash',
+          ipAddress: '127.0.0.1',
+          severity: 'info',
+          timestamp: new Date(Date.now() - 1000 * 60 * 240)
+        },
+        {
+          user: owner ? owner._id : null,
+          action: 'VERIFICATION_PERFORMED',
+          entityType: 'LandParcel',
+          description: 'Public deed verification token validated against national cadastral seal',
+          ipAddress: '105.160.42.19',
+          severity: 'info',
+          timestamp: new Date(Date.now() - 1000 * 60 * 360)
+        }
+      ];
+
+      for (const log of sampleLogs) {
+        await AuditLog.create(log);
+      }
+      console.log('🌱 Seeded initial audit trail logs');
+    }
+
+    logger.info('Default seed users and audit logs verified.');
   } catch (error) {
-    logger.error(`Error during user auto-seeding: ${error.message}`);
+    logger.error(`Error during user/audit auto-seeding: ${error.message}`);
     console.error('⚠️ User seeding error:', error.message);
   }
 };

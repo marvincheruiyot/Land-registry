@@ -40,6 +40,12 @@
             <span>Transfers</span>
           </button>
 
+          <button @click="handleSectionChange('audit')" 
+            :class="['sidebar-nav-item', (activeSection === 'audit' || activeSection === 'logs') ? 'active' : '']">
+            <i class="bi bi-shield-check"></i>
+            <span>Audit Trail</span>
+          </button>
+
           <button @click="handleSectionChange('reports')" 
             :class="['sidebar-nav-item', activeSection === 'reports' ? 'active' : '']">
             <i class="bi bi-bar-chart-fill"></i>
@@ -357,15 +363,15 @@
           <!-- Navigation Filter Pills for Admin Control -->
           <div class="d-flex flex-wrap gap-2 mb-4">
             <button
-              v-for="section in ['overview', 'users', 'monitoring', 'logs']"
+              v-for="section in ['overview', 'users', 'parcels', 'audit', 'monitoring']"
               :key="section"
-              @click="activeSection = section"
+              @click="handleSectionChange(section)"
               :class="[
                 'btn btn-pill text-capitalize',
-                activeSection === section ? 'btn-dark-pill' : 'btn-light-pill'
+                (activeSection === section || (section === 'audit' && activeSection === 'logs')) ? 'btn-dark-pill' : 'btn-light-pill'
               ]"
             >
-              <span>{{ section }}</span>
+              <span>{{ section === 'audit' ? 'Audit Trail' : section }}</span>
             </button>
           </div>
         </div>
@@ -811,69 +817,343 @@
             </div>
           </div>
 
-          <!-- Logs View -->
-          <div v-else-if="activeSection === 'logs'">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-              <h5 class="fw-bold text-dark mb-0">System Audit Logs</h5>
-              <div class="d-flex gap-2">
-                <button class="btn btn-pill btn-sm btn-light-pill">
-                  <i class="bi bi-filter"></i> Filter
+          <!-- Audit Trail & System Logs View -->
+          <div v-else-if="activeSection === 'audit' || activeSection === 'logs'">
+            <!-- Audit Header and Action Controls -->
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+              <div>
+                <div class="d-flex align-items-center gap-2">
+                  <h5 class="fw-bold text-dark mb-0">National Cadastral Audit Trail & Telemetry</h5>
+                  <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 small">
+                    <i class="bi bi-circle-fill text-success me-1 pulse-dot" style="font-size: 0.5rem;"></i> Live Ledger
+                  </span>
+                </div>
+                <p class="text-muted small mb-0 mt-1">
+                  Cryptographic, tamper-evident log recording all officer actions, title deed registrations, transfers, and security events.
+                </p>
+              </div>
+              <div class="d-flex flex-wrap align-items-center gap-2">
+                <button
+                  @click="loadAuditLogs(true)"
+                  class="btn btn-pill btn-sm btn-light-pill"
+                  :disabled="loadingAuditLogs"
+                  title="Refresh Audit Records"
+                >
+                  <i class="bi bi-arrow-clockwise" :class="{ 'spin-anim': loadingAuditLogs }"></i>
+                  <span class="ms-1">Refresh</span>
                 </button>
-                <button class="btn btn-pill btn-sm btn-dark-pill">
-                  <i class="bi bi-download"></i> Export
+                <button
+                  @click="exportAuditData('csv')"
+                  class="btn btn-pill btn-sm btn-dark-pill"
+                  :disabled="exportingAudit"
+                  title="Download CSV Audit Report"
+                >
+                  <i class="bi bi-file-earmark-spreadsheet me-1 text-warning"></i>
+                  <span>{{ exportingAudit ? 'Exporting...' : 'Export CSV' }}</span>
+                </button>
+                <button
+                  @click="exportAuditData('json')"
+                  class="btn btn-pill btn-sm btn-light-pill"
+                  :disabled="exportingAudit"
+                  title="Download Raw JSON Logs"
+                >
+                  <i class="bi bi-file-earmark-code me-1 text-primary"></i>
+                  <span>JSON</span>
+                </button>
+                <button
+                  @click="showAuditCleanupModal = true"
+                  class="btn btn-pill btn-sm btn-light-pill text-danger"
+                  title="Purge Old Inactive Logs"
+                >
+                  <i class="bi bi-trash3 me-1"></i>
+                  <span>Prune</span>
                 </button>
               </div>
             </div>
 
-            <div class="mb-3">
-              <div class="p-3 bg-light rounded-4 border d-flex justify-content-between align-items-center mb-2">
-                <div class="d-flex align-items-center gap-3">
-                  <span class="badge badge-pill-custom badge-soft-green">SUCCESS</span>
+            <!-- Key Audit Metrics Summary Cards -->
+            <div class="row g-3 mb-4">
+              <div class="col-12 col-sm-6 col-xl-3">
+                <div class="p-3 bg-light rounded-4 border h-100 d-flex flex-column justify-content-between">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small fw-medium">Total Audited Events</span>
+                    <div class="avatar-circle bg-dark text-white" style="width: 32px; height: 32px; font-size: 0.85rem;">
+                      <i class="bi bi-clipboard-data-fill"></i>
+                    </div>
+                  </div>
                   <div>
-                    <div class="fw-bold text-dark small">User Login</div>
-                    <small class="text-muted">admin@landregistry.go.ke • 2026-09-20 14:35:22</small>
+                    <div class="display-6 fw-bold text-dark lh-1 mb-1">{{ auditTotal }}</div>
+                    <small class="text-muted" style="font-size: 0.75rem;">10-Year statutory ledger retention</small>
                   </div>
                 </div>
-                <small class="text-muted">IP: 192.168.1.1</small>
               </div>
 
-              <div class="p-3 bg-light rounded-4 border d-flex justify-content-between align-items-center mb-2">
-                <div class="d-flex align-items-center gap-3">
-                  <span class="badge badge-pill-custom badge-soft-blue">INFO</span>
+              <div class="col-12 col-sm-6 col-xl-3">
+                <div class="p-3 bg-light rounded-4 border h-100 d-flex flex-column justify-content-between">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small fw-medium">Logged in 24 Hours</span>
+                    <div class="avatar-circle bg-primary-subtle text-primary" style="width: 32px; height: 32px; font-size: 0.85rem;">
+                      <i class="bi bi-clock-history"></i>
+                    </div>
+                  </div>
                   <div>
-                    <div class="fw-bold text-dark small">Parcel Registration</div>
-                    <small class="text-muted">officer@landregistry.go.ke • 2026-09-20 14:22:15</small>
+                    <div class="display-6 fw-bold text-primary lh-1 mb-1">{{ auditStats.todayCount }}</div>
+                    <small class="text-muted" style="font-size: 0.75rem;">Recent transactions & authentications</small>
                   </div>
                 </div>
-                <small class="text-muted">Parcel #12345</small>
               </div>
 
-              <div class="p-3 bg-light rounded-4 border d-flex justify-content-between align-items-center mb-2">
-                <div class="d-flex align-items-center gap-3">
-                  <span class="badge badge-pill-custom badge-soft-yellow">WARNING</span>
+              <div class="col-12 col-sm-6 col-xl-3">
+                <div class="p-3 bg-light rounded-4 border h-100 d-flex flex-column justify-content-between">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small fw-medium">Security Warnings</span>
+                    <div class="avatar-circle bg-warning-subtle text-warning" style="width: 32px; height: 32px; font-size: 0.85rem;">
+                      <i class="bi bi-exclamation-triangle-fill"></i>
+                    </div>
+                  </div>
                   <div>
-                    <div class="fw-bold text-dark small">Failed Login Attempt</div>
-                    <small class="text-muted">unknown@example.com • 2026-09-20 13:45:10</small>
+                    <div class="display-6 fw-bold text-warning lh-1 mb-1">{{ auditStats.warningCount }}</div>
+                    <small class="text-muted" style="font-size: 0.75rem;">Failed logins & permission checks</small>
                   </div>
                 </div>
-                <small class="text-muted">IP: 203.0.113.5</small>
               </div>
 
-              <div class="p-3 bg-light rounded-4 border d-flex justify-content-between align-items-center">
-                <div class="d-flex align-items-center gap-3">
-                  <span class="badge badge-pill-custom badge-soft-green">SUCCESS</span>
+              <div class="col-12 col-sm-6 col-xl-3">
+                <div class="p-3 bg-light rounded-4 border h-100 d-flex flex-column justify-content-between">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="text-muted small fw-medium">Critical / Anomaly Flags</span>
+                    <div class="avatar-circle bg-danger-subtle text-danger" style="width: 32px; height: 32px; font-size: 0.85rem;">
+                      <i class="bi bi-shield-x"></i>
+                    </div>
+                  </div>
                   <div>
-                    <div class="fw-bold text-dark small">Transfer Approved</div>
-                    <small class="text-muted">admin@landregistry.go.ke • 2026-09-20 12:10:33</small>
+                    <div class="display-6 fw-bold text-danger lh-1 mb-1">{{ auditStats.criticalCount }}</div>
+                    <small class="text-muted" style="font-size: 0.75rem;">Suspicious activity & system alerts</small>
                   </div>
                 </div>
-                <small class="text-muted">Transfer #TRF-2026-089</small>
               </div>
             </div>
 
-            <div class="alert alert-info">
-              <i class="bi bi-info-circle-fill me-2"></i>
-              Audit logs are retained for 90 days and automatically archived for compliance purposes.
+            <!-- Search, Filter & Live Telemetry Bar -->
+            <div class="p-3 bg-light rounded-4 border mb-4">
+              <div class="row g-2 align-items-center">
+                <div class="col-12 col-lg-4">
+                  <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-white border-end-0">
+                      <i class="bi bi-search text-muted"></i>
+                    </span>
+                    <input
+                      v-model="auditSearchQuery"
+                      @input="debounceAuditSearch"
+                      type="text"
+                      class="form-control border-start-0 bg-white"
+                      placeholder="Search action, actor, IP, parcel or text..."
+                    />
+                    <button
+                      v-if="auditSearchQuery"
+                      @click="auditSearchQuery = ''; loadAuditLogs()"
+                      class="btn btn-outline-secondary border-start-0 bg-white"
+                      type="button"
+                    >
+                      <i class="bi bi-x"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="col-6 col-sm-3 col-lg-2">
+                  <select v-model="auditActionCategory" @change="onActionCategoryChange" class="form-select form-select-sm bg-white">
+                    <option value="all">All Actions</option>
+                    <option value="auth">Authentication</option>
+                    <option value="users">User Operations</option>
+                    <option value="parcels">Land Parcels</option>
+                    <option value="transfers">Conveyance Transfers</option>
+                    <option value="documents">Deeds & Documents</option>
+                    <option value="security">Security & System</option>
+                  </select>
+                </div>
+
+                <div class="col-6 col-sm-3 col-lg-2">
+                  <select v-model="auditSeverityFilter" @change="loadAuditLogs" class="form-select form-select-sm bg-white">
+                    <option value="all">All Severities</option>
+                    <option value="info">Info</option>
+                    <option value="warning">Warning</option>
+                    <option value="error">Error</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                </div>
+
+                <div class="col-6 col-sm-3 col-lg-2">
+                  <select v-model="auditDateRange" @change="onDateRangeChange" class="form-select form-select-sm bg-white">
+                    <option value="all">All Time</option>
+                    <option value="today">Today</option>
+                    <option value="week">Last 7 Days</option>
+                    <option value="month">Last 30 Days</option>
+                  </select>
+                </div>
+
+                <div class="col-6 col-sm-3 col-lg-2 d-flex justify-content-end align-items-center gap-2">
+                  <div class="form-check form-switch m-0" title="Automatic polling every 15 seconds">
+                    <input v-model="auditAutoRefresh" class="form-check-input" type="checkbox" id="autoRefreshToggle" />
+                    <label class="form-check-label small text-muted user-select-none" for="autoRefreshToggle">Live</label>
+                  </div>
+                  <button
+                    v-if="hasActiveAuditFilters"
+                    @click="resetAuditFilters"
+                    class="btn btn-outline-secondary btn-sm"
+                    title="Reset All Filters"
+                  >
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Audit Trail Table / Loading / Empty State -->
+            <div v-if="loadingAuditLogs && auditLogs.length === 0" class="text-center py-5">
+              <div class="spinner-border text-dark" role="status" style="width: 2.2rem; height: 2.2rem;"></div>
+              <p class="text-muted mt-2 small">Decrypting and loading system audit trail...</p>
+            </div>
+
+            <div v-else-if="auditLogs.length === 0" class="text-center py-5 bg-light rounded-4 border">
+              <div class="avatar-circle bg-dark text-white mx-auto mb-3" style="width: 54px; height: 54px; font-size: 1.3rem;">
+                <i class="bi bi-shield-check"></i>
+              </div>
+              <h6 class="fw-bold text-dark">No Audit Log Entries Found</h6>
+              <p class="text-muted small mb-3">No ledger records matched the search filters or date range.</p>
+              <button @click="resetAuditFilters" class="btn btn-pill btn-sm btn-dark-pill">
+                Reset All Filters
+              </button>
+            </div>
+
+            <div v-else>
+              <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 w-100">
+                  <thead class="text-muted small">
+                    <tr>
+                      <th scope="col" class="border-0 pb-3" style="min-width: 155px;">TIMESTAMP</th>
+                      <th scope="col" class="border-0 pb-3" style="min-width: 175px;">ACTION TYPE</th>
+                      <th scope="col" class="border-0 pb-3" style="min-width: 180px;">ACTOR</th>
+                      <th scope="col" class="border-0 pb-3" style="min-width: 260px;">EVENT DESCRIPTION</th>
+                      <th scope="col" class="border-0 pb-3" style="min-width: 125px;">ENTITY</th>
+                      <th scope="col" class="border-0 pb-3" style="min-width: 95px;">SEVERITY</th>
+                      <th scope="col" class="border-0 pb-3" style="min-width: 110px;">CLIENT IP</th>
+                      <th scope="col" class="border-0 pb-3 text-end" style="min-width: 75px;">INSPECT</th>
+                    </tr>
+                  </thead>
+                  <tbody class="border-top-0">
+                    <tr v-for="(log, idx) in auditLogs" :key="log._id || idx">
+                      <td class="py-3">
+                        <div class="fw-semibold text-dark small">{{ formatExactTime(log.timestamp || log.createdAt) }}</div>
+                        <small class="text-muted" style="font-size: 0.72rem;">{{ formatRelativeTime(log.timestamp || log.createdAt) }}</small>
+                      </td>
+
+                      <td class="py-3">
+                        <span :class="['badge badge-pill-custom', getActionBadgeClass(log.action)]">
+                          <i :class="getActionIcon(log.action)" class="me-1"></i>
+                          {{ formatActionName(log.action) }}
+                        </span>
+                      </td>
+
+                      <td class="py-3">
+                        <div class="d-flex align-items-center gap-2">
+                          <div class="avatar-circle bg-dark text-white flex-shrink-0" style="width: 32px; height: 32px; font-size: 0.75rem;">
+                            {{ getActorInitials(log.user) }}
+                          </div>
+                          <div class="text-truncate" style="max-width: 140px;">
+                            <div class="fw-bold text-dark small text-truncate">
+                              {{ log.user?.fullName || 'System / Anon' }}
+                            </div>
+                            <small class="text-muted d-block text-truncate" style="font-size: 0.72rem;">
+                              {{ log.user?.role ? log.user.role.replace('_', ' ') : 'Automated Daemon' }}
+                            </small>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td class="py-3">
+                        <div class="small text-dark text-break" style="max-width: 340px;">
+                          {{ log.description || log.details || 'Activity registered in ledger' }}
+                        </div>
+                        <small v-if="log.metadata?.parcelNumber" class="text-muted" style="font-size: 0.72rem;">
+                          Ref: {{ log.metadata.parcelNumber }}
+                        </small>
+                      </td>
+
+                      <td class="py-3">
+                        <span v-if="log.entityType" class="badge bg-light text-dark border rounded-pill px-2 py-1 small">
+                          {{ log.entityType }}
+                        </span>
+                        <span v-else class="text-muted small">—</span>
+                      </td>
+
+                      <td class="py-3">
+                        <span :class="['badge badge-pill-custom', getSeverityBadgeClass(log.severity)]">
+                          {{ (log.severity || 'info').toUpperCase() }}
+                        </span>
+                      </td>
+
+                      <td class="py-3">
+                        <code class="small text-muted">{{ log.ipAddress || '127.0.0.1' }}</code>
+                      </td>
+
+                      <td class="text-end py-3">
+                        <button
+                          @click="openAuditDetailModal(log)"
+                          class="btn btn-pill btn-sm btn-light-pill rounded-circle p-2"
+                          title="Inspect Cryptographic Log Record"
+                        >
+                          <i class="bi bi-eye-fill"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Pagination Footer -->
+              <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center mt-4 pt-3 border-top gap-3">
+                <div class="d-flex align-items-center gap-2">
+                  <small class="text-muted">
+                    Showing {{ ((auditPage - 1) * auditLimit) + 1 }} to {{ Math.min(auditPage * auditLimit, auditTotal) }} of {{ auditTotal }} records
+                  </small>
+                  <select v-model="auditLimit" @change="auditPage = 1; loadAuditLogs()" class="form-select form-select-sm bg-light" style="width: 75px;">
+                    <option :value="10">10</option>
+                    <option :value="20">20</option>
+                    <option :value="50">50</option>
+                    <option :value="100">100</option>
+                  </select>
+                </div>
+
+                <nav v-if="auditPages > 1">
+                  <ul class="pagination pagination-sm mb-0">
+                    <li :class="['page-item', auditPage <= 1 ? 'disabled' : '']">
+                      <button @click="changeAuditPage(auditPage - 1)" class="page-link" :disabled="auditPage <= 1">
+                        <i class="bi bi-chevron-left"></i>
+                      </button>
+                    </li>
+                    <li
+                      v-for="p in visibleAuditPages"
+                      :key="p"
+                      :class="['page-item', auditPage === p ? 'active' : '']"
+                    >
+                      <button @click="changeAuditPage(p)" class="page-link">{{ p }}</button>
+                    </li>
+                    <li :class="['page-item', auditPage >= auditPages ? 'disabled' : '']">
+                      <button @click="changeAuditPage(auditPage + 1)" class="page-link" :disabled="auditPage >= auditPages">
+                        <i class="bi bi-chevron-right"></i>
+                      </button>
+                    </li>
+                  </ul>
+                </nav>
+              </div>
+            </div>
+
+            <!-- Compliance Footer Notice -->
+            <div class="alert alert-light border mt-4 mb-0 small text-muted d-flex align-items-center gap-2">
+              <i class="bi bi-shield-lock-fill text-warning fs-5"></i>
+              <div>
+                <strong>Legal Compliance & Tamper Evident Integrity:</strong> Audit log entries are immutable and preserved for 10 years per National Land Commission regulations. All mutations are timestamped and signed.
+              </div>
             </div>
           </div>
 
@@ -882,8 +1162,158 @@
             <div class="avatar-circle bg-light text-dark mx-auto mb-3" style="width: 60px; height: 60px; font-size: 1.5rem;">
               <i class="bi bi-shield-check"></i>
             </div>
-            <h5 class="fw-bold text-dark">All Security Nodes Operating Normally</h5>
-            <p class="text-muted small">Continuous telemetry streaming from Ardhi House central datacenter.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Audit Log Detail Inspector Modal -->
+      <div v-if="showAuditDetailModal && selectedAuditLog" class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+          <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom px-4 py-3 bg-light">
+              <div class="d-flex align-items-center gap-2">
+                <span :class="['badge badge-pill-custom', getActionBadgeClass(selectedAuditLog.action)]">
+                  <i :class="getActionIcon(selectedAuditLog.action)" class="me-1"></i>
+                  {{ formatActionName(selectedAuditLog.action) }}
+                </span>
+                <h5 class="modal-title fw-bold text-dark mb-0 fs-6">Cryptographic Audit Entry</h5>
+              </div>
+              <button @click="showAuditDetailModal = false; selectedAuditLog = null" type="button" class="btn-close"></button>
+            </div>
+            <div class="modal-body p-4">
+              <!-- Summary Grid -->
+              <div class="row g-3 mb-4">
+                <div class="col-sm-6">
+                  <div class="p-3 bg-light rounded-3 border">
+                    <small class="text-muted d-block mb-1">Timestamp</small>
+                    <div class="fw-bold text-dark small">{{ formatExactTime(selectedAuditLog.timestamp || selectedAuditLog.createdAt) }}</div>
+                    <small class="text-muted">{{ formatRelativeTime(selectedAuditLog.timestamp || selectedAuditLog.createdAt) }}</small>
+                  </div>
+                </div>
+                <div class="col-sm-6">
+                  <div class="p-3 bg-light rounded-3 border">
+                    <small class="text-muted d-block mb-1">Severity & Record ID</small>
+                    <div class="d-flex align-items-center gap-2">
+                      <span :class="['badge badge-pill-custom', getSeverityBadgeClass(selectedAuditLog.severity)]">
+                        {{ (selectedAuditLog.severity || 'info').toUpperCase() }}
+                      </span>
+                      <code class="small text-truncate" style="max-width: 140px;">{{ selectedAuditLog._id }}</code>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Actor Information -->
+              <h6 class="fw-bold text-dark mb-2">Actor / Operator Identity</h6>
+              <div class="p-3 bg-light rounded-3 border mb-4">
+                <div v-if="selectedAuditLog.user" class="row g-2">
+                  <div class="col-sm-6">
+                    <small class="text-muted d-block">Full Name</small>
+                    <span class="fw-semibold text-dark small">{{ selectedAuditLog.user.fullName }}</span>
+                  </div>
+                  <div class="col-sm-6">
+                    <small class="text-muted d-block">Email Address</small>
+                    <span class="fw-semibold text-dark small">{{ selectedAuditLog.user.email }}</span>
+                  </div>
+                  <div class="col-sm-6">
+                    <small class="text-muted d-block">Security Role</small>
+                    <span class="badge bg-dark text-white rounded-pill px-2 py-1 small">{{ (selectedAuditLog.user.role || '').replace('_', ' ') }}</span>
+                  </div>
+                  <div class="col-sm-6" v-if="selectedAuditLog.user.nationalId">
+                    <small class="text-muted d-block">National ID Number</small>
+                    <span class="fw-semibold text-dark small">{{ selectedAuditLog.user.nationalId }}</span>
+                  </div>
+                </div>
+                <div v-else class="text-muted small">
+                  <i class="bi bi-robot me-1"></i> System automated daemon or unauthenticated request
+                </div>
+              </div>
+
+              <!-- Event Description -->
+              <h6 class="fw-bold text-dark mb-2">Event Description</h6>
+              <div class="p-3 bg-light rounded-3 border mb-4 text-dark small">
+                {{ selectedAuditLog.description || selectedAuditLog.details || 'No extended description available' }}
+              </div>
+
+              <!-- Entity Target & Network -->
+              <h6 class="fw-bold text-dark mb-2">Target Entity & Origin Telemetry</h6>
+              <div class="p-3 bg-light rounded-3 border mb-4">
+                <div class="row g-2">
+                  <div class="col-sm-6">
+                    <small class="text-muted d-block">Entity Type</small>
+                    <span class="fw-semibold text-dark small">{{ selectedAuditLog.entityType || 'General / System' }}</span>
+                  </div>
+                  <div class="col-sm-6">
+                    <small class="text-muted d-block">Entity ID</small>
+                    <code class="small">{{ selectedAuditLog.entityId || 'N/A' }}</code>
+                  </div>
+                  <div class="col-sm-6">
+                    <small class="text-muted d-block">Client IP Address</small>
+                    <code class="small">{{ selectedAuditLog.ipAddress || '127.0.0.1' }}</code>
+                  </div>
+                  <div class="col-sm-6">
+                    <small class="text-muted d-block">User-Agent</small>
+                    <small class="text-muted text-break" style="font-size: 0.75rem;">{{ selectedAuditLog.userAgent || 'Mozilla / Automated' }}</small>
+                  </div>
+                </div>
+              </div>
+
+              <!-- State Changes / Diffs if available -->
+              <div v-if="selectedAuditLog.changes">
+                <h6 class="fw-bold text-dark mb-2">State Modifications (Audit Diff)</h6>
+                <div class="p-3 bg-dark text-light rounded-3 mb-4" style="max-height: 200px; overflow-y: auto;">
+                  <pre class="small text-white mb-0" style="font-size: 0.75rem;">{{ JSON.stringify(selectedAuditLog.changes, null, 2) }}</pre>
+                </div>
+              </div>
+
+              <!-- Metadata if available -->
+              <div v-if="selectedAuditLog.metadata">
+                <h6 class="fw-bold text-dark mb-2">Extended Metadata Payload</h6>
+                <div class="p-3 bg-dark text-light rounded-3" style="max-height: 200px; overflow-y: auto;">
+                  <pre class="small text-white mb-0" style="font-size: 0.75rem;">{{ JSON.stringify(selectedAuditLog.metadata, null, 2) }}</pre>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer border-top bg-light">
+              <button @click="showAuditDetailModal = false; selectedAuditLog = null" type="button" class="btn btn-pill btn-sm btn-dark-pill">
+                Close Inspector
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Audit Cleanup / Prune Modal -->
+      <div v-if="showAuditCleanupModal" class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+          <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom px-4 py-3 bg-light">
+              <h5 class="modal-title fw-bold text-dark mb-0 fs-6">
+                <i class="bi bi-trash3 text-danger me-2"></i> Prune Historical Audit Logs
+              </h5>
+              <button @click="showAuditCleanupModal = false" type="button" class="btn-close"></button>
+            </div>
+            <div class="modal-body p-4">
+              <div class="alert alert-warning small mb-3">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                <strong>Notice:</strong> This permanently purges non-critical audit records older than the selected retention threshold. Critical and security violation logs are always preserved.
+              </div>
+              <div class="mb-3">
+                <label class="form-label small fw-semibold text-dark">Purge logs older than:</label>
+                <select v-model="cleanupRetentionDays" class="form-select bg-light">
+                  <option :value="30">30 Days</option>
+                  <option :value="90">90 Days (Recommended)</option>
+                  <option :value="180">180 Days (6 Months)</option>
+                  <option :value="365">365 Days (1 Year)</option>
+                </select>
+              </div>
+            </div>
+            <div class="modal-footer border-top bg-light">
+              <button @click="showAuditCleanupModal = false" type="button" class="btn btn-light btn-sm">Cancel</button>
+              <button @click="executeAuditCleanup" class="btn btn-danger btn-sm btn-pill" :disabled="cleaningAuditLogs">
+                {{ cleaningAuditLogs ? 'Purging...' : 'Execute Purge' }}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -892,15 +1322,22 @@
 </template>
 
 <script>
-import { ref, onMounted, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import api from '@/services/api'
 
 export default {
   name: 'AdminDashboard',
-  setup() {
+  props: {
+    initialSection: {
+      type: String,
+      default: 'overview'
+    }
+  },
+  setup(props) {
     const router = useRouter()
-    const activeSection = ref('overview')
+    const route = useRoute()
+    const activeSection = ref(props.initialSection || route.query.section || 'overview')
     const usersList = ref([])
     const parcelsList = ref([])
     const loadingUsers = ref(false)
@@ -958,6 +1395,349 @@ export default {
       'Kajiado', 'Nyeri', 'Meru', 'Kakamega', 'Bungoma', 'Kilifi', 'Kwale'
     ]
 
+    // ==========================================
+    // AUDIT TRAIL REACTIVE STATE & METHODS
+    // ==========================================
+    const auditLogs = ref([])
+    const auditTotal = ref(0)
+    const auditPage = ref(1)
+    const auditPages = ref(1)
+    const auditLimit = ref(20)
+    const loadingAuditLogs = ref(false)
+    const exportingAudit = ref(false)
+    const cleaningAuditLogs = ref(false)
+
+    const auditSearchQuery = ref('')
+    const auditActionCategory = ref('all')
+    const auditSeverityFilter = ref('all')
+    const auditDateRange = ref('all')
+    const auditAutoRefresh = ref(false)
+    let autoRefreshTimer = null
+    let searchDebounceTimer = null
+
+    const auditStats = ref({
+      total: 0,
+      todayCount: 0,
+      warningCount: 0,
+      criticalCount: 0,
+      activeUsersCount: 0
+    })
+
+    const selectedAuditLog = ref(null)
+    const showAuditDetailModal = ref(false)
+    const showAuditCleanupModal = ref(false)
+    const cleanupRetentionDays = ref(90)
+
+    const hasActiveAuditFilters = computed(() => {
+      return (
+        auditSearchQuery.value !== '' ||
+        auditActionCategory.value !== 'all' ||
+        auditSeverityFilter.value !== 'all' ||
+        auditDateRange.value !== 'all'
+      )
+    })
+
+    const visibleAuditPages = computed(() => {
+      const current = auditPage.value
+      const total = auditPages.value
+      if (total <= 5) {
+        return Array.from({ length: total }, (_, i) => i + 1)
+      }
+      let start = Math.max(1, current - 2)
+      let end = Math.min(total, current + 2)
+      if (start === 1) end = Math.min(5, total)
+      if (end === total) start = Math.max(1, total - 4)
+      const pages = []
+      for (let i = start; i <= end; i++) pages.push(i)
+      return pages
+    })
+
+    const loadAuditStats = async () => {
+      try {
+        const response = await api.get('/audit-logs/stats')
+        if (response.data?.data) {
+          auditStats.value = response.data.data
+        }
+      } catch (err) {
+        console.warn('Failed to load audit stats:', err?.message)
+      }
+    }
+
+    const loadAuditLogs = async (silent = false) => {
+      if (!silent) loadingAuditLogs.value = true
+      try {
+        const params = {
+          page: auditPage.value,
+          limit: auditLimit.value
+        }
+
+        if (auditSearchQuery.value.trim()) {
+          params.search = auditSearchQuery.value.trim()
+        }
+
+        if (auditSeverityFilter.value !== 'all') {
+          params.severity = auditSeverityFilter.value
+        }
+
+        // Map action category to query or specific action
+        if (auditActionCategory.value !== 'all') {
+          const categoryMap = {
+            auth: 'LOGIN',
+            users: 'USER_CREATED',
+            parcels: 'PARCEL_CREATED',
+            transfers: 'TRANSFER_APPROVED',
+            documents: 'DOCUMENT_UPLOADED',
+            security: 'SYSTEM_CONFIG_CHANGED'
+          }
+          if (categoryMap[auditActionCategory.value]) {
+            params.action = categoryMap[auditActionCategory.value]
+          }
+        }
+
+        // Date range calculation
+        if (auditDateRange.value === 'today') {
+          const start = new Date()
+          start.setHours(0, 0, 0, 0)
+          params.startDate = start.toISOString()
+        } else if (auditDateRange.value === 'week') {
+          const start = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+          params.startDate = start.toISOString()
+        } else if (auditDateRange.value === 'month') {
+          const start = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+          params.startDate = start.toISOString()
+        }
+
+        const response = await api.get('/audit-logs', { params })
+        if (response.data?.data) {
+          auditLogs.value = response.data.data.logs || []
+          auditTotal.value = response.data.data.total || 0
+          auditPage.value = response.data.data.page || 1
+          auditPages.value = response.data.data.pages || 1
+        }
+      } catch (err) {
+        console.error('Error fetching audit logs:', err)
+      } finally {
+        if (!silent) loadingAuditLogs.value = false
+      }
+    }
+
+    const debounceAuditSearch = () => {
+      clearTimeout(searchDebounceTimer)
+      searchDebounceTimer = setTimeout(() => {
+        auditPage.value = 1
+        loadAuditLogs()
+      }, 350)
+    }
+
+    const onActionCategoryChange = () => {
+      auditPage.value = 1
+      loadAuditLogs()
+    }
+
+    const onDateRangeChange = () => {
+      auditPage.value = 1
+      loadAuditLogs()
+    }
+
+    const resetAuditFilters = () => {
+      auditSearchQuery.value = ''
+      auditActionCategory.value = 'all'
+      auditSeverityFilter.value = 'all'
+      auditDateRange.value = 'all'
+      auditPage.value = 1
+      loadAuditLogs()
+    }
+
+    const changeAuditPage = (p) => {
+      if (p >= 1 && p <= auditPages.value) {
+        auditPage.value = p
+        loadAuditLogs()
+      }
+    }
+
+    const openAuditDetailModal = (log) => {
+      selectedAuditLog.value = log
+      showAuditDetailModal.value = true
+    }
+
+    const exportAuditData = async (format = 'csv') => {
+      exportingAudit.value = true
+      try {
+        const params = { format }
+        if (auditSeverityFilter.value !== 'all') params.severity = auditSeverityFilter.value
+        if (auditActionCategory.value !== 'all') {
+          const categoryMap = {
+            auth: 'LOGIN',
+            users: 'USER_CREATED',
+            parcels: 'PARCEL_CREATED',
+            transfers: 'TRANSFER_APPROVED',
+            documents: 'DOCUMENT_UPLOADED',
+            security: 'SYSTEM_CONFIG_CHANGED'
+          }
+          if (categoryMap[auditActionCategory.value]) params.action = categoryMap[auditActionCategory.value]
+        }
+
+        const response = await api.get('/audit-logs/export', {
+          params,
+          responseType: format === 'csv' ? 'blob' : 'json'
+        })
+
+        if (format === 'csv') {
+          const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' })
+          const url = window.URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.href = url
+          link.setAttribute('download', `land-registry-audit-${Date.now()}.csv`)
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          window.URL.revokeObjectURL(url)
+        } else {
+          const jsonStr = JSON.stringify(response.data, null, 2)
+          const blob = new Blob([jsonStr], { type: 'application/json' })
+          const url = window.URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.href = url
+          link.setAttribute('download', `land-registry-audit-${Date.now()}.json`)
+          document.body.appendChild(link)
+          link.click()
+          document.body.removeChild(link)
+          window.URL.revokeObjectURL(url)
+        }
+      } catch (err) {
+        console.error('Failed to export audit logs:', err)
+        alert('Could not export audit trail: ' + (err.response?.data?.message || err.message))
+      } finally {
+        exportingAudit.value = false
+      }
+    }
+
+    const executeAuditCleanup = async () => {
+      if (!confirm(`Are you sure you want to permanently prune audit logs older than ${cleanupRetentionDays.value} days?`)) {
+        return
+      }
+      cleaningAuditLogs.value = true
+      try {
+        const response = await api.delete(`/audit-logs/cleanup?days=${cleanupRetentionDays.value}`)
+        alert(response.data?.message || 'Old logs cleaned up successfully')
+        showAuditCleanupModal.value = false
+        await loadAuditLogs()
+        await loadAuditStats()
+      } catch (err) {
+        alert(err.response?.data?.message || 'Failed to prune audit logs')
+      } finally {
+        cleaningAuditLogs.value = false
+      }
+    }
+
+    const formatExactTime = (dateVal) => {
+      if (!dateVal) return 'N/A'
+      try {
+        const d = new Date(dateVal)
+        return d.toLocaleString('en-KE', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        })
+      } catch (e) {
+        return String(dateVal)
+      }
+    }
+
+    const formatRelativeTime = (dateVal) => {
+      if (!dateVal) return ''
+      try {
+        const now = Date.now()
+        const diff = Math.floor((now - new Date(dateVal).getTime()) / 1000)
+        if (diff < 60) return `${diff}s ago`
+        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+        if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+        return `${Math.floor(diff / 86400)}d ago`
+      } catch (e) {
+        return ''
+      }
+    }
+
+    const formatActionName = (action) => {
+      if (!action) return 'Activity'
+      return action.replace(/_/g, ' ')
+    }
+
+    const getActionBadgeClass = (action) => {
+      const act = (action || '').toUpperCase()
+      if (act.includes('LOGIN_FAILED') || act.includes('DELETED') || act.includes('REJECTED') || act.includes('SUSPICIOUS')) {
+        return 'badge-soft-red'
+      }
+      if (act.includes('LOGIN') || act.includes('APPROVED') || act.includes('ACTIVATE') || act.includes('VERIF')) {
+        return 'badge-soft-green'
+      }
+      if (act.includes('PARCEL') || act.includes('TRANSFER')) {
+        return 'badge-soft-yellow'
+      }
+      if (act.includes('USER') || act.includes('DOCUMENT')) {
+        return 'badge-soft-blue'
+      }
+      return 'badge-soft-dark'
+    }
+
+    const getActionIcon = (action) => {
+      const act = (action || '').toUpperCase()
+      if (act.includes('LOGIN_FAILED')) return 'bi bi-shield-x'
+      if (act.includes('LOGIN')) return 'bi bi-box-arrow-in-right'
+      if (act.includes('LOGOUT')) return 'bi bi-box-arrow-right'
+      if (act.includes('PARCEL')) return 'bi bi-map'
+      if (act.includes('TRANSFER')) return 'bi bi-arrow-left-right'
+      if (act.includes('USER')) return 'bi bi-person-fill'
+      if (act.includes('DOCUMENT')) return 'bi bi-file-earmark-lock2'
+      if (act.includes('CONFIG') || act.includes('SYSTEM')) return 'bi bi-gear-fill'
+      if (act.includes('VERIF')) return 'bi bi-patch-check-fill'
+      return 'bi bi-activity'
+    }
+
+    const getSeverityBadgeClass = (severity) => {
+      switch ((severity || '').toLowerCase()) {
+        case 'critical':
+        case 'error':
+          return 'badge-soft-red'
+        case 'warning':
+          return 'badge-soft-yellow'
+        case 'info':
+        default:
+          return 'badge-soft-blue'
+      }
+    }
+
+    const getActorInitials = (user) => {
+      if (!user || !user.fullName) return 'SY'
+      const names = user.fullName.trim().split(' ')
+      if (names.length >= 2) {
+        return (names[0][0] + names[1][0]).toUpperCase()
+      }
+      return names[0].slice(0, 2).toUpperCase()
+    }
+
+    watch(auditAutoRefresh, (val) => {
+      if (val) {
+        autoRefreshTimer = setInterval(() => {
+          if (activeSection.value === 'audit' || activeSection.value === 'logs') {
+            loadAuditLogs(true)
+            loadAuditStats()
+          }
+        }, 15000)
+      } else if (autoRefreshTimer) {
+        clearInterval(autoRefreshTimer)
+        autoRefreshTimer = null
+      }
+    })
+
+    onUnmounted(() => {
+      if (autoRefreshTimer) clearInterval(autoRefreshTimer)
+      if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
+    })
+
     const handleLogout = () => {
       localStorage.removeItem('token')
       router.push({ name: 'Login' })
@@ -972,7 +1752,8 @@ export default {
         monitoring: 'System Monitoring',
         reports: 'Reports & Analytics',
         settings: 'System Settings',
-        logs: 'System Logs'
+        audit: 'System Audit Trail',
+        logs: 'System Audit Trail'
       }
       return titles[section] || 'Admin Overview'
     }
@@ -983,10 +1764,11 @@ export default {
         users: 'Manage system users, roles, and permissions',
         parcels: 'View and manage all registered land parcels',
         transfers: 'Monitor and approve land transfer requests',
-        monitoring: 'System health, performance, and security',
+        monitoring: 'System health, performance, and security telemetry',
         reports: 'Generate and view system reports',
         settings: 'Configure system parameters and preferences',
-        logs: 'View system audit logs and activities'
+        audit: 'Comprehensive cryptographic activity logs, tamper-evident timestamps, and security audit telemetry',
+        logs: 'Comprehensive cryptographic activity logs, tamper-evident timestamps, and security audit telemetry'
       }
       return descriptions[section] || 'Administrator control panel'
     }
@@ -1166,11 +1948,19 @@ export default {
       if (newSection === 'parcels' && parcelsList.value.length === 0) {
         loadParcels()
       }
+      if (newSection === 'audit' || newSection === 'logs') {
+        loadAuditLogs()
+        loadAuditStats()
+      }
     }
 
     onMounted(() => {
       loadUsers()
       loadStats()
+      if (activeSection.value === 'audit' || activeSection.value === 'logs') {
+        loadAuditLogs()
+      }
+      loadAuditStats()
     })
 
     return {
@@ -1190,6 +1980,44 @@ export default {
       newParcelForm,
       kenyanCounties,
       stats,
+      // Audit state and methods
+      auditLogs,
+      auditTotal,
+      auditPage,
+      auditPages,
+      auditLimit,
+      loadingAuditLogs,
+      exportingAudit,
+      cleaningAuditLogs,
+      auditSearchQuery,
+      auditActionCategory,
+      auditSeverityFilter,
+      auditDateRange,
+      auditAutoRefresh,
+      auditStats,
+      selectedAuditLog,
+      showAuditDetailModal,
+      showAuditCleanupModal,
+      cleanupRetentionDays,
+      hasActiveAuditFilters,
+      visibleAuditPages,
+      loadAuditLogs,
+      loadAuditStats,
+      debounceAuditSearch,
+      onActionCategoryChange,
+      onDateRangeChange,
+      resetAuditFilters,
+      changeAuditPage,
+      openAuditDetailModal,
+      exportAuditData,
+      executeAuditCleanup,
+      formatExactTime,
+      formatRelativeTime,
+      formatActionName,
+      getActionBadgeClass,
+      getActionIcon,
+      getSeverityBadgeClass,
+      getActorInitials,
       handleLogout,
       getSectionTitle,
       getSectionDescription,
@@ -1316,5 +2144,24 @@ export default {
 
 .table tbody tr:hover {
   background-color: #f9fafb;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.spin-anim {
+  display: inline-block;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(0.8); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.pulse-dot {
+  display: inline-block;
+  animation: pulse 1.8s infinite ease-in-out;
 }
 </style>
