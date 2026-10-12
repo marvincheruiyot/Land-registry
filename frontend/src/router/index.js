@@ -147,10 +147,16 @@ const routes = [
     meta: { requiresAuth: true, roles: ['Administrator'] }
   },
   {
+    path: '/support-tickets',
+    name: 'SupportTickets',
+    component: () => import('@/views/admin/SupportTicketsPage.vue'),
+    meta: { requiresAuth: true, roles: ['Administrator'] }
+  },
+  {
     path: '/settings',
     name: 'SystemSettings',
     component: () => import('@/views/admin/SystemSettings.vue'),
-    meta: { requiresAuth: true, roles: ['Administrator'] }
+    meta: { requiresAuth: true, roles: ['Administrator', 'Land_Officer'] }
   },
   {
     path: '/profile',

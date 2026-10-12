@@ -125,6 +125,16 @@
 
           <router-link
             v-if="isAdministrator"
+            to="/support-tickets"
+            class="sidebar-nav-item text-decoration-none"
+            active-class="active"
+          >
+            <i class="bi bi-headset"></i>
+            <span>Support Tickets</span>
+          </router-link>
+
+          <router-link
+            v-if="isAdministrator || isLandOfficer"
             to="/settings"
             class="sidebar-nav-item text-decoration-none"
             active-class="active"

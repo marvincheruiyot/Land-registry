@@ -27,7 +27,17 @@ export const useSettingsStore = defineStore('settings', {
       sessionTimeout: 30,
       twoFactor: false,
       activityLogging: true,
-      dataExport: true
+      dataExport: true,
+      // Officer-specific settings
+      defaultCounty: '',
+      autoSaveDrafts: true,
+      showQuickActions: true,
+      dashboardLayout: 'comfortable',
+      emailNotifyTransfers: true,
+      showStatsWidget: true,
+      workStartTime: '08:00',
+      workEndTime: '17:00',
+      dailyTarget: 10
     }
 
     return savedSettings ? { ...defaults, ...JSON.parse(savedSettings) } : defaults
@@ -122,7 +132,17 @@ export const useSettingsStore = defineStore('settings', {
         sessionTimeout: 30,
         twoFactor: false,
         activityLogging: true,
-        dataExport: true
+        dataExport: true,
+        // Officer-specific settings
+        defaultCounty: '',
+        autoSaveDrafts: true,
+        showQuickActions: true,
+        dashboardLayout: 'comfortable',
+        emailNotifyTransfers: true,
+        showStatsWidget: true,
+        workStartTime: '08:00',
+        workEndTime: '17:00',
+        dailyTarget: 10
       }
       this.updateSettings(defaults)
     },

@@ -139,7 +139,7 @@ export default {
     ]
 
     const canApprove = computed(() => {
-      return authStore.isLandOfficer || authStore.isAdministrator
+      return authStore.isLandOfficer
     })
 
     const getStatusBadge = (status) => {

@@ -1,5 +1,6 @@
 const LandParcel = require('../models/LandParcel');
 const User = require('../models/User');
+const AuditLog = require('../models/AuditLog');
 
 // Create land parcel
 exports.createParcel = async (req, res, next) => {
@@ -55,6 +56,27 @@ exports.createParcel = async (req, res, next) => {
 
     const parcel = await LandParcel.create(parcelData);
     await parcel.populate('currentOwner', 'fullName email nationalId phoneNumber');
+
+    // Create audit log
+    await AuditLog.log({
+      user: req.user._id,
+      action: 'PARCEL_CREATED',
+      entityType: 'LandParcel',
+      entityId: parcel._id,
+      description: `Land parcel ${parcelNumber} registered and assigned to ${owner.fullName}`,
+      details: `Registered by ${req.user.fullName}. Owner: ${owner.fullName} (National ID: ${owner.nationalId}). Location: ${location?.county}. Size: ${sizeInAcres} acres. Land Use: ${landUse}`,
+      ipAddress: req.ip || req.connection?.remoteAddress || '127.0.0.1',
+      userAgent: req.headers['user-agent'] || '',
+      severity: 'info',
+      metadata: {
+        parcelNumber,
+        ownerName: owner.fullName,
+        ownerNationalId: owner.nationalId,
+        sizeInAcres,
+        county: location?.county,
+        landUse
+      }
+    });
 
     res.status(201).json({
       status: 'success',
@@ -204,6 +226,8 @@ exports.getParcelById = async (req, res, next) => {
 // Update parcel
 exports.updateParcel = async (req, res, next) => {
   try {
+    const oldParcel = await LandParcel.findById(req.params.id).populate('currentOwner', 'fullName');
+    
     const parcel = await LandParcel.findByIdAndUpdate(
       req.params.id,
       { ...req.body, lastModifiedBy: req.user._id },
@@ -217,6 +241,23 @@ exports.updateParcel = async (req, res, next) => {
       });
     }
 
+    // Create audit log
+    await AuditLog.log({
+      user: req.user._id,
+      action: 'PARCEL_UPDATED',
+      entityType: 'LandParcel',
+      entityId: parcel._id,
+      description: `Land parcel ${parcel.parcelNumber} updated by ${req.user.fullName}`,
+      details: `Modified parcel details. Owner: ${parcel.currentOwner?.fullName}`,
+      ipAddress: req.ip || '127.0.0.1',
+      userAgent: req.headers['user-agent'] || '',
+      severity: 'info',
+      changes: {
+        before: oldParcel?.toObject(),
+        after: parcel.toObject()
+      }
+    });
+
     res.status(200).json({
       status: 'success',
       data: { parcel }
@@ -229,13 +270,34 @@ exports.updateParcel = async (req, res, next) => {
 // Delete parcel
 exports.deleteParcel = async (req, res, next) => {
   try {
-    const parcel = await LandParcel.findByIdAndDelete(req.params.id);
+    const parcel = await LandParcel.findById(req.params.id).populate('currentOwner', 'fullName');
+    
     if (!parcel) {
       return res.status(404).json({
         status: 'error',
         message: 'Land parcel not found'
       });
     }
+
+    // Create audit log before deletion
+    await AuditLog.log({
+      user: req.user._id,
+      action: 'PARCEL_DELETED',
+      entityType: 'LandParcel',
+      entityId: parcel._id,
+      description: `Land parcel ${parcel.parcelNumber} deleted by ${req.user.fullName}`,
+      details: `Deleted parcel owned by ${parcel.currentOwner?.fullName}. Location: ${parcel.location?.county}`,
+      ipAddress: req.ip || '127.0.0.1',
+      userAgent: req.headers['user-agent'] || '',
+      severity: 'warning',
+      metadata: {
+        parcelNumber: parcel.parcelNumber,
+        ownerName: parcel.currentOwner?.fullName,
+        county: parcel.location?.county
+      }
+    });
+
+    await LandParcel.findByIdAndDelete(req.params.id);
 
     res.status(200).json({
       status: 'success',
@@ -260,7 +322,25 @@ exports.flagParcel = async (req, res, next) => {
         status: 'disputed'
       },
       { new: true }
-    );
+    ).populate('currentOwner', 'fullName');
+
+    // Create audit log
+    await AuditLog.log({
+      user: req.user._id,
+      action: 'PARCEL_FLAGGED',
+      entityType: 'LandParcel',
+      entityId: parcel._id,
+      description: `Land parcel ${parcel.parcelNumber} flagged by ${req.user.fullName}`,
+      details: `Reason: ${flagReason}. Owner: ${parcel.currentOwner?.fullName}`,
+      ipAddress: req.ip || '127.0.0.1',
+      userAgent: req.headers['user-agent'] || '',
+      severity: 'warning',
+      metadata: {
+        flagReason,
+        parcelNumber: parcel.parcelNumber,
+        ownerName: parcel.currentOwner?.fullName
+      }
+    });
 
     res.status(200).json({
       status: 'success',
