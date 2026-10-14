@@ -227,22 +227,31 @@ export default {
       generateSuccess.value = null
       
       try {
-        const response = await api.post('/reports/generate', reportForm.value)
+        const response = await api.post('/reports/generate', reportForm.value, {
+          responseType: 'blob'
+        })
         
-        if (response.data?.status === 'success') {
-          const newReport = response.data.data.report
-          reports.value.unshift(newReport)
-          
-          generateSuccess.value = 'Report compiled successfully and ready for download!'
-          
-          // Clear success message after 3 seconds
-          setTimeout(() => {
-            generateSuccess.value = null
-          }, 3000)
-          
-          // Reset form
-          reportForm.value = { type: '', startDate: '', endDate: '', format: 'pdf' }
-        }
+        // Download the PDF directly
+        const reportTitle = (reportForm.value.type || 'Registry').replace(/_/g, ' ').toUpperCase();
+        const filename = `${reportTitle}_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+        const url = window.URL.createObjectURL(new Blob([response.data]))
+        const link = document.createElement('a')
+        link.href = url
+        link.setAttribute('download', filename)
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        window.URL.revokeObjectURL(url)
+        
+        generateSuccess.value = 'Report generated and downloaded successfully!'
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => {
+          generateSuccess.value = null
+        }, 3000)
+        
+        // Reset form
+        reportForm.value = { type: '', startDate: '', endDate: '', format: 'pdf' }
       } catch (err) {
         console.error('Generate report error:', err)
         generateError.value = err.response?.data?.message || 'Failed to generate report'

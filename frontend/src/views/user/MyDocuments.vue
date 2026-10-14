@@ -346,7 +346,9 @@ export default {
     }
 
     const viewDocument = (doc) => {
-      if (doc.fileUrl) {
+      if (doc._id) {
+        window.open(`/api/v1/documents/${doc._id}/view`, '_blank')
+      } else if (doc.fileUrl) {
         window.open(doc.fileUrl, '_blank')
       }
     }

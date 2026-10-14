@@ -88,11 +88,20 @@
                 </p>
               </div>
 
-              <div v-if="error" class="p-3 bg-danger-subtle text-danger rounded-4 mb-4 small">
-                {{ error }}
+              <div v-if="error" class="alert alert-danger d-flex align-items-start rounded-4 mb-4">
+                <i class="bi bi-exclamation-triangle-fill me-2 mt-1"></i>
+                <div>
+                  <div class="fw-bold mb-1">Transfer Submission Failed</div>
+                  <div class="small">{{ error }}</div>
+                </div>
               </div>
-              <div v-if="success" class="p-3 bg-success-subtle text-success rounded-4 mb-4 small">
-                {{ success }}
+              
+              <div v-if="success" class="alert alert-success d-flex align-items-start rounded-4 mb-4">
+                <i class="bi bi-check-circle-fill me-2 mt-1"></i>
+                <div>
+                  <div class="fw-bold mb-1">Success!</div>
+                  <div class="small">{{ success }}</div>
+                </div>
               </div>
 
               <div class="d-flex gap-2">
@@ -155,16 +164,23 @@ export default {
       success.value = null
 
       try {
-        await api.post('/transfers', form.value)
-        success.value = 'Conveyance application lodged! Redirecting to tracking queue...'
+        // Send only the required fields, ensuring landParcel is just the ID
+        await api.post('/transfers', {
+          landParcel: form.value.landParcel,  // This is already the ID from the select value
+          newOwnerNationalId: form.value.newOwnerNationalId,
+          transferType: form.value.transferType,
+          transferAmount: form.value.transferAmount || 0,
+          notes: form.value.notes || ''
+        })
+        
+        success.value = 'Transfer request submitted successfully! Land officers have been notified.'
         setTimeout(() => {
           router.push({ name: 'Transfers' })
-        }, 1500)
+        }, 2000)
       } catch (err) {
-        success.value = 'Conveyance lodged! Redirecting...'
-        setTimeout(() => {
-          router.push({ name: 'Transfers' })
-        }, 1500)
+        console.error('Transfer submission error:', err)
+        // Show the actual error message from the backend
+        error.value = err.response?.data?.message || 'Failed to submit transfer request. Please check all fields and try again.'
       } finally {
         loading.value = false
       }

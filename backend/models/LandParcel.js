@@ -55,7 +55,7 @@ const landParcelSchema = new mongoose.Schema({
     transferredDate: Date,
     transferMethod: {
       type: String,
-      enum: ['purchase', 'inheritance', 'gift', 'subdivision', 'initial_registration']
+      enum: ['purchase', 'sale', 'inheritance', 'gift', 'subdivision', 'initial_registration', 'court_order']
     },
     notes: String
   }],

@@ -722,8 +722,19 @@ export default {
       transferSuccess.value = null
 
       try {
+        // Ensure we're sending only the ID string, not an object
+        const parcelId = typeof transferForm.value.parcelId === 'string' 
+          ? transferForm.value.parcelId 
+          : transferForm.value.parcelId?._id || transferForm.value.parcelId?.id;
+
+        if (!parcelId) {
+          transferError.value = 'Please select a valid parcel';
+          transferLoading.value = false;
+          return;
+        }
+
         await api.post('/transfers', {
-          landParcel: transferForm.value.parcelId,
+          landParcel: parcelId,
           newOwnerNationalId: transferForm.value.newOwnerId,
           transferType: transferForm.value.transferType,
           notes: transferForm.value.notes || ''

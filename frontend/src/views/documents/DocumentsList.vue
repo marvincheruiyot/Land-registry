@@ -246,7 +246,7 @@ export default {
     }
 
     const viewDocument = (docId) => {
-      window.open(`/api/v1/documents/${docId}`, '_blank')
+      window.open(`/api/v1/documents/${docId}/view`, '_blank')
     }
 
     const downloadDocument = async (docId) => {

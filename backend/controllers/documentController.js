@@ -139,6 +139,34 @@ exports.downloadDocument = async (req, res, next) => {
   }
 };
 
+// View Document (display inline in browser)
+exports.viewDocument = async (req, res, next) => {
+  try {
+    const document = await Document.findById(req.params.id);
+    if (!document) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Document not found'
+      });
+    }
+
+    // If file exists on disk, serve it
+    if (fs.existsSync(document.filePath)) {
+      res.setHeader('Content-Type', document.mimeType || 'application/pdf');
+      res.setHeader('Content-Disposition', `inline; filename="${document.originalName}"`);
+      const fileStream = fs.createReadStream(document.filePath);
+      return fileStream.pipe(res);
+    }
+
+    // If file doesn't exist (demo), return a mock PDF
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${document.originalName}"`);
+    res.send(Buffer.from('%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /Resources 4 0 R /MediaBox [0 0 612 792] /Contents 5 0 R >>\nendobj\n4 0 obj\n<< /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >>\nendobj\n5 0 obj\n<< /Length 200 >>\nstream\nBT\n/F1 18 Tf\n50 750 Td\n(Ministry of Lands Document) Tj\n0 -30 Td\n/F1 12 Tf\n(Document Name: ' + document.originalName + ') Tj\n0 -20 Td\n(Type: ' + document.documentType + ') Tj\n0 -20 Td\n(Uploaded: ' + new Date(document.createdAt).toLocaleDateString() + ') Tj\nET\nendstream\nendobj\nxref\n0 6\n0000000000 65535 f\n0000000009 00000 n\n0000000058 00000 n\n0000000115 00000 n\n0000000214 00000 n\n0000000309 00000 n\ntrailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n560\n%%EOF'));
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Delete Document
 exports.deleteDocument = async (req, res, next) => {
   try {

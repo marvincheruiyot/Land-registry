@@ -211,18 +211,8 @@ export default {
         const response = await api.get(endpoint)
         result.value = response.data?.data || response.data
       } catch (err) {
-        // Provide mock display if network is in mock demo mode
-        if (searchQuery.value) {
-          result.value = {
-            parcelNumber: searchQuery.value.toUpperCase().includes('NAI') ? searchQuery.value.toUpperCase() : 'NAI/KIL/2026/04',
-            ownerName: 'Sarah Jepkemoi',
-            location: 'Kilimani, Nairobi County',
-            size: '0.75',
-            status: 'active'
-          }
-        } else {
-          error.value = err.response?.data?.message || 'Verification failed. Please check your query.'
-        }
+        console.error('Verification error:', err)
+        error.value = err.response?.data?.message || 'Verification failed. The parcel or token was not found in the registry.'
       } finally {
         loading.value = false
       }

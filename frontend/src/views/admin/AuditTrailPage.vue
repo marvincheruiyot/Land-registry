@@ -43,13 +43,13 @@
         <div class="col-12 col-sm-6 col-xl-3">
           <div class="dash-card h-100">
             <div class="d-flex justify-content-between align-items-start mb-2">
-              <span class="text-muted small fw-medium">Security Warnings</span>
-              <div class="avatar-circle bg-warning text-dark" style="width: 32px; height: 32px; font-size: 0.85rem;">
-                <i class="bi bi-exclamation-triangle-fill"></i>
+              <span class="text-muted small fw-medium">Transfer Activities</span>
+              <div class="avatar-circle bg-success text-white" style="width: 32px; height: 32px; font-size: 0.85rem;">
+                <i class="bi bi-arrow-left-right"></i>
               </div>
             </div>
-            <div class="display-6 fw-bold text-warning lh-1 mb-1">{{ auditStats.warningCount }}</div>
-            <small class="text-muted" style="font-size: 0.75rem;">Failed logins & permission checks</small>
+            <div class="display-6 fw-bold text-success lh-1 mb-1">{{ auditStats.transferCount }}</div>
+            <small class="text-muted" style="font-size: 0.75rem;">Initiated, approved & rejected transfers</small>
           </div>
         </div>
 
@@ -111,6 +111,7 @@
               <option value="parcel">Parcel</option>
               <option value="transfer">Transfer</option>
               <option value="user">User</option>
+              <option value="document">Document</option>
             </select>
           </div>
 
@@ -186,7 +187,10 @@
                   </div>
                 </td>
                 <td class="py-3">
-                  <div class="small">{{ log.description || log.details || 'No description' }}</div>
+                  <div class="small">{{ getEventDescription(log) }}</div>
+                  <small v-if="log.details" class="text-muted d-block mt-1">
+                    {{ getTransferDetails(log) }}
+                  </small>
                 </td>
                 <td class="py-3">
                   <span class="badge bg-light text-dark px-2 py-1">{{ log.entityType || log.resourceType || '—' }}</span>
@@ -288,16 +292,83 @@ export default {
     
     const auditStats = ref({
       todayCount: 0,
-      warningCount: 0,
+      transferCount: 0,
       criticalCount: 0
     })
 
     const auditTotal = computed(() => totalRecords.value)
     const totalPages = computed(() => Math.ceil(totalRecords.value / itemsPerPage.value))
     const displayedLogs = computed(() => {
+      let filtered = [...auditLogs.value]
+      
+      // Apply search filter
+      if (searchQuery.value) {
+        const query = searchQuery.value.toLowerCase()
+        filtered = filtered.filter(log => 
+          log.action?.toLowerCase().includes(query) ||
+          log.user?.fullName?.toLowerCase().includes(query) ||
+          log.user?.role?.toLowerCase().includes(query) ||
+          log.description?.toLowerCase().includes(query) ||
+          log.details?.parcelNumber?.toLowerCase().includes(query) ||
+          log.ipAddress?.includes(query)
+        )
+      }
+      
+      // Apply action filter
+      if (actionFilter.value !== 'all') {
+        filtered = filtered.filter(log => {
+          const action = log.action?.toLowerCase() || ''
+          switch(actionFilter.value) {
+            case 'auth':
+              return action.includes('login') || action.includes('logout') || action.includes('auth')
+            case 'parcel':
+              return action.includes('parcel') && !action.includes('transfer')
+            case 'transfer':
+              return action.includes('transfer')
+            case 'user':
+              return action.includes('user') && !action.includes('login')
+            case 'document':
+              return action.includes('document')
+            default:
+              return true
+          }
+        })
+      }
+      
+      // Apply severity filter
+      if (severityFilter.value !== 'all') {
+        filtered = filtered.filter(log => 
+          log.severity?.toLowerCase() === severityFilter.value.toLowerCase()
+        )
+      }
+      
+      // Apply date range filter
+      if (dateRange.value !== 'all') {
+        const now = new Date()
+        filtered = filtered.filter(log => {
+          const logDate = new Date(log.createdAt)
+          switch(dateRange.value) {
+            case 'today':
+              return logDate.toDateString() === now.toDateString()
+            case 'week':
+              const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+              return logDate >= weekAgo
+            case 'month':
+              const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate())
+              return logDate >= monthAgo
+            default:
+              return true
+          }
+        })
+      }
+      
+      // Update total records for pagination
+      totalRecords.value = filtered.length
+      
+      // Apply pagination
       const start = (currentPage.value - 1) * itemsPerPage.value
       const end = start + itemsPerPage.value
-      return auditLogs.value.slice(start, end)
+      return filtered.slice(start, end)
     })
 
     const hasFilters = computed(() => {
@@ -311,9 +382,13 @@ export default {
         const response = await api.get('/audit-logs?limit=1000')
         if (response.data?.data?.logs) {
           auditLogs.value = response.data.data.logs
-          totalRecords.value = response.data.data.total || auditLogs.value.length
+          
+          // Reset to first page when filters change
+          if (!forceRefresh) {
+            currentPage.value = 1
+          }
 
-          // Calculate stats
+          // Calculate stats from all logs (not filtered)
           const now = new Date()
           const today = now.toDateString()
           
@@ -321,8 +396,8 @@ export default {
             new Date(log.createdAt).toDateString() === today
           ).length
 
-          auditStats.value.warningCount = auditLogs.value.filter(log => 
-            log.severity?.toLowerCase() === 'warning'
+          auditStats.value.transferCount = auditLogs.value.filter(log => 
+            log.action?.includes('TRANSFER')
           ).length
 
           auditStats.value.criticalCount = auditLogs.value.filter(log => 
@@ -382,6 +457,40 @@ export default {
       return classes[severity?.toLowerCase()] || 'bg-secondary text-white'
     }
 
+    const getEventDescription = (log) => {
+      if (log.description) return log.description
+      
+      // Format transfer actions nicely
+      if (log.action?.includes('TRANSFER')) {
+        const details = log.details || {}
+        if (log.action === 'TRANSFER_INITIATED') {
+          return `Transfer initiated from ${details.previousOwner || 'Unknown'} to ${details.newOwner || 'Unknown'}`
+        } else if (log.action === 'TRANSFER_APPROVED') {
+          return `Transfer approved by ${details.approvedBy || 'Officer'}`
+        } else if (log.action === 'TRANSFER_REJECTED') {
+          return `Transfer rejected: ${details.rejectionReason || 'No reason provided'}`
+        } else if (log.action === 'TRANSFER_CANCELLED') {
+          return `Transfer cancelled by ${details.cancelledBy || 'User'}`
+        }
+      }
+      
+      return log.action || 'No description'
+    }
+
+    const getTransferDetails = (log) => {
+      if (!log.action?.includes('TRANSFER')) return ''
+      
+      const details = log.details || {}
+      const parts = []
+      
+      if (details.parcelNumber) parts.push(`Parcel: ${details.parcelNumber}`)
+      if (details.transferType) parts.push(`Type: ${details.transferType}`)
+      if (details.previousOwnerNationalId) parts.push(`From ID: ${details.previousOwnerNationalId}`)
+      if (details.newOwnerNationalId) parts.push(`To ID: ${details.newOwnerNationalId}`)
+      
+      return parts.join(' • ')
+    }
+
     onMounted(() => {
       loadAuditLogs()
     })
@@ -406,7 +515,9 @@ export default {
       changeItemsPerPage,
       formatDate,
       formatTime,
-      getSeverityClass
+      getSeverityClass,
+      getEventDescription,
+      getTransferDetails
     }
   }
 }

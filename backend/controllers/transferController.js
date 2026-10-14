@@ -9,6 +9,17 @@ exports.initiateTransfer = async (req, res, next) => {
   try {
     const { landParcel, newOwnerNationalId, transferType, transferAmount, notes } = req.body;
 
+    // Log what we received for debugging
+    console.log('Received landParcel:', typeof landParcel, landParcel);
+
+    // Validate that landParcel is a valid ObjectId string, not an object
+    if (typeof landParcel !== 'string' || !landParcel.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid parcel ID format. Please refresh the page and try again.'
+      });
+    }
+
     const parcel = await LandParcel.findById(landParcel);
     if (!parcel) {
       return res.status(404).json({

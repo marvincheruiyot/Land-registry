@@ -18,6 +18,7 @@ const upload = multer({ storage });
 router.post('/upload', protect, upload.single('file'), documentController.uploadDocument);
 router.get('/', protect, documentController.getDocuments);
 router.get('/:id', protect, documentController.getDocument);
+router.get('/:id/view', protect, documentController.viewDocument);
 router.get('/:id/download', protect, documentController.downloadDocument);
 router.delete('/:id', protect, authorize('Land_Officer', 'Administrator'), documentController.deleteDocument);
 
