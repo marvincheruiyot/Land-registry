@@ -155,7 +155,11 @@ exports.login = async (req, res, next) => {
     // Find user and include password field
     const user = await User.findOne(query).select('+password');
 
+    console.log('=== LOGIN DEBUG ===');
+    console.log('Login attempt for:', email || nationalId);
+
     if (!user) {
+      console.log('User not found');
       // Log failed login attempt
       await AuditLog.log({
         user: null,
@@ -172,8 +176,13 @@ exports.login = async (req, res, next) => {
       });
     }
 
+    console.log('User found:', user._id, user.email);
+    console.log('Password from login form:', password);
+    console.log('Hashed password in DB:', user.password);
+
     // Check if account is locked
     if (user.isAccountLocked()) {
+      console.log('Account is locked');
       return res.status(403).json({
         status: 'error',
         message: 'Account is temporarily locked due to multiple failed login attempts. Please try again later.'
@@ -182,6 +191,7 @@ exports.login = async (req, res, next) => {
 
     // Check password
     const isPasswordCorrect = await user.comparePassword(password);
+    console.log('Password comparison result:', isPasswordCorrect);
 
     if (!isPasswordCorrect) {
       // Increment failed login attempts
@@ -411,9 +421,31 @@ exports.changePassword = async (req, res, next) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Please provide both current and new password'
+      });
+    }
+
     const user = await User.findById(req.user._id).select('+password');
 
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found'
+      });
+    }
+
+    console.log('=== PASSWORD CHANGE DEBUG ===');
+    console.log('User ID:', user._id);
+    console.log('User email:', user.email);
+    console.log('Current password from form:', currentPassword);
+    console.log('New password from form:', newPassword);
+    console.log('Current hashed password in DB:', user.password);
+
     const isMatch = await user.comparePassword(currentPassword);
+    console.log('Current password matches:', isMatch);
 
     if (!isMatch) {
       return res.status(401).json({
@@ -423,22 +455,43 @@ exports.changePassword = async (req, res, next) => {
     }
 
     user.password = newPassword;
+    console.log('Before save - password field:', user.password);
+    console.log('Is password modified?', user.isModified('password'));
+    
     await user.save();
+    
+    console.log('After save - password was saved');
+    
+    // Verify the password was saved by fetching user again
+    const savedUser = await User.findById(user._id).select('+password');
+    console.log('New hashed password in DB:', savedUser.password);
+    console.log('Can verify with new password:', await savedUser.comparePassword(newPassword));
+    console.log('=== END PASSWORD CHANGE DEBUG ===');
 
     // Log password change
-    await AuditLog.log({
-      user: user._id,
-      action: 'PASSWORD_CHANGED',
-      description: 'Password changed successfully',
-      ipAddress: req.ip,
-      userAgent: req.get('user-agent')
-    });
+    try {
+      await AuditLog.create({
+        action: 'PASSWORD_CHANGED',
+        performedBy: user._id,
+        entityType: 'User',
+        entityId: user._id,
+        details: {
+          message: 'Password changed successfully',
+          timestamp: new Date()
+        },
+        ipAddress: req.ip
+      });
+    } catch (logError) {
+      console.error('Failed to create audit log:', logError);
+      // Continue even if audit log fails
+    }
 
     res.status(200).json({
       status: 'success',
       message: 'Password changed successfully'
     });
   } catch (error) {
+    console.error('Change password error:', error);
     next(error);
   }
 };

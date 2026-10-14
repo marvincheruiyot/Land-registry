@@ -646,11 +646,14 @@ export default {
           ).length
           console.log(`✅ Parcels registered by me: ${stats.value.registeredByMe}`)
 
-          // Calculate county distribution (counts and acreage)
-          const nairobiParcels = recentParcels.value.filter(p => p.location?.county === 'Nairobi')
-          const kiambuParcels = recentParcels.value.filter(p => p.location?.county === 'Kiambu')
-          const nakuruParcels = recentParcels.value.filter(p => p.location?.county === 'Nakuru')
-          const otherParcels = recentParcels.value.filter(p => p.location?.county && !['Nairobi', 'Kiambu', 'Nakuru'].includes(p.location.county))
+          // Calculate county distribution (counts and acreage) - case insensitive
+          const nairobiParcels = recentParcels.value.filter(p => p.location?.county?.toUpperCase() === 'NAIROBI')
+          const kiambuParcels = recentParcels.value.filter(p => p.location?.county?.toUpperCase() === 'KIAMBU')
+          const nakuruParcels = recentParcels.value.filter(p => p.location?.county?.toUpperCase() === 'NAKURU')
+          const otherParcels = recentParcels.value.filter(p => {
+            const county = p.location?.county?.toUpperCase()
+            return county && !['NAIROBI', 'KIAMBU', 'NAKURU'].includes(county)
+          })
 
           countyStats.value = {
             nairobi: nairobiParcels.length,

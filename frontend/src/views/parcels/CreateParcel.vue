@@ -105,26 +105,24 @@
                 </div>
 
                 <div class="col-md-6">
-                  <label class="form-label fw-semibold text-dark">GPS Latitude *</label>
+                  <label class="form-label fw-semibold text-dark">GPS Latitude (Optional)</label>
                   <input
                     v-model.number="form.location.coordinates.latitude"
                     type="number"
                     step="0.000001"
                     class="form-control rounded-pill py-2 bg-light border-0"
                     placeholder="e.g. -1.286389"
-                    required
                   />
                 </div>
 
                 <div class="col-md-6">
-                  <label class="form-label fw-semibold text-dark">GPS Longitude *</label>
+                  <label class="form-label fw-semibold text-dark">GPS Longitude (Optional)</label>
                   <input
                     v-model.number="form.location.coordinates.longitude"
                     type="number"
                     step="0.000001"
                     class="form-control rounded-pill py-2 bg-light border-0"
                     placeholder="e.g. 36.817223"
-                    required
                   />
                 </div>
               </div>

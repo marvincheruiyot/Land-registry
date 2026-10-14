@@ -124,13 +124,56 @@
 
                 <div class="mb-3">
                   <label class="form-label fw-semibold text-dark">New Password *</label>
-                  <input v-model="passwordForm.newPassword" type="password" class="form-control rounded-pill py-2 bg-light border-0" required />
-                  <small class="text-muted">Must be at least 8 characters with uppercase, lowercase, number, and special character</small>
+                  <input 
+                    v-model="passwordForm.newPassword" 
+                    @input="validatePassword"
+                    type="password" 
+                    class="form-control rounded-pill py-2 bg-light border-0" 
+                    required 
+                  />
+                  
+                  <!-- Password Requirements Checklist -->
+                  <div class="mt-2 p-3 bg-light rounded-3">
+                    <small class="text-muted fw-semibold d-block mb-2">Password Requirements:</small>
+                    <div class="d-flex flex-column gap-1">
+                      <small :class="passwordRequirements.minLength ? 'text-success' : 'text-muted'">
+                        <i :class="passwordRequirements.minLength ? 'bi bi-check-circle-fill' : 'bi bi-circle'"></i>
+                        At least 8 characters
+                      </small>
+                      <small :class="passwordRequirements.hasUppercase ? 'text-success' : 'text-muted'">
+                        <i :class="passwordRequirements.hasUppercase ? 'bi bi-check-circle-fill' : 'bi bi-circle'"></i>
+                        One uppercase letter
+                      </small>
+                      <small :class="passwordRequirements.hasLowercase ? 'text-success' : 'text-muted'">
+                        <i :class="passwordRequirements.hasLowercase ? 'bi bi-check-circle-fill' : 'bi bi-circle'"></i>
+                        One lowercase letter
+                      </small>
+                      <small :class="passwordRequirements.hasNumber ? 'text-success' : 'text-muted'">
+                        <i :class="passwordRequirements.hasNumber ? 'bi bi-check-circle-fill' : 'bi bi-circle'"></i>
+                        One number
+                      </small>
+                      <small :class="passwordRequirements.hasSpecial ? 'text-success' : 'text-muted'">
+                        <i :class="passwordRequirements.hasSpecial ? 'bi bi-check-circle-fill' : 'bi bi-circle'"></i>
+                        One special character (!@#$%^&*)
+                      </small>
+                    </div>
+                  </div>
                 </div>
 
                 <div class="mb-3">
                   <label class="form-label fw-semibold text-dark">Confirm New Password *</label>
-                  <input v-model="passwordForm.confirmPassword" type="password" class="form-control rounded-pill py-2 bg-light border-0" required />
+                  <input 
+                    v-model="passwordForm.confirmPassword" 
+                    type="password" 
+                    class="form-control rounded-pill py-2 bg-light border-0" 
+                    required 
+                  />
+                  <small v-if="passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword" class="text-danger">
+                    <i class="bi bi-x-circle-fill"></i> Passwords do not match
+                  </small>
+                  <small v-else-if="passwordForm.confirmPassword && passwordForm.newPassword === passwordForm.confirmPassword" class="text-success">
+                    <i class="bi bi-check-circle-fill"></i> Passwords match
+                  </small>
                 </div>
               </div>
 
@@ -198,6 +241,25 @@ export default {
       confirmPassword: ''
     })
 
+    const passwordRequirements = ref({
+      minLength: false,
+      hasUppercase: false,
+      hasLowercase: false,
+      hasNumber: false,
+      hasSpecial: false
+    })
+
+    const validatePassword = () => {
+      const pwd = passwordForm.value.newPassword
+      passwordRequirements.value = {
+        minLength: pwd.length >= 8,
+        hasUppercase: /[A-Z]/.test(pwd),
+        hasLowercase: /[a-z]/.test(pwd),
+        hasNumber: /\d/.test(pwd),
+        hasSpecial: /[!@#$%^&*(),.?":{}|<>]/.test(pwd)
+      }
+    }
+
     onMounted(() => {
       if (user.value) {
         profileForm.value = {
@@ -237,6 +299,13 @@ export default {
     }
 
     const changePassword = async () => {
+      // Validate all password requirements are met
+      if (!Object.values(passwordRequirements.value).every(req => req)) {
+        passwordSuccess.value = false
+        passwordMessage.value = 'Please meet all password requirements.'
+        return
+      }
+
       if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
         passwordSuccess.value = false
         passwordMessage.value = 'Passwords do not match.'
@@ -246,16 +315,32 @@ export default {
       changingPassword.value = true
       passwordMessage.value = null
       try {
-        await api.post('/auth/change-password', passwordForm.value)
+        const response = await api.post('/auth/change-password', {
+          currentPassword: passwordForm.value.currentPassword,
+          newPassword: passwordForm.value.newPassword
+        })
+        
         passwordSuccess.value = true
-        passwordMessage.value = 'Password has been updated.'
+        passwordMessage.value = response.data?.message || 'Password has been updated successfully.'
         passwordForm.value = { currentPassword: '', newPassword: '', confirmPassword: '' }
+        passwordRequirements.value = {
+          minLength: false,
+          hasUppercase: false,
+          hasLowercase: false,
+          hasNumber: false,
+          hasSpecial: false
+        }
       } catch (err) {
-        passwordSuccess.value = true
-        passwordMessage.value = 'Password changed successfully.'
-        passwordForm.value = { currentPassword: '', newPassword: '', confirmPassword: '' }
+        console.error('Change password error:', err)
+        passwordSuccess.value = false
+        passwordMessage.value = err.response?.data?.message || err.message || 'Failed to change password. Please check your current password and try again.'
       } finally {
         changingPassword.value = false
+        setTimeout(() => {
+          if (passwordSuccess.value) {
+            passwordMessage.value = null
+          }
+        }, 3000)
       }
     }
 
@@ -273,8 +358,10 @@ export default {
       updateSuccess,
       passwordMessage,
       passwordSuccess,
+      passwordRequirements,
       updateProfile,
-      changePassword
+      changePassword,
+      validatePassword
     }
   }
 }

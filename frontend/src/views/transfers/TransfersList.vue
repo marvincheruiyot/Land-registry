@@ -72,11 +72,13 @@
 
                   <div class="row g-3 mt-1 text-muted small">
                     <div class="col-auto">
-                      <span class="text-dark fw-semibold">Current:</span> {{ t.previousOwner || t.currentOwner?.fullName || 'Previous Owner' }}
+                      <span class="text-dark fw-semibold">Current:</span> 
+                      {{ typeof t.previousOwner === 'string' ? t.previousOwner : t.previousOwner?.fullName || t.currentOwner?.fullName || 'Previous Owner' }}
                     </div>
                     <div class="col-auto">
                       <i class="bi bi-arrow-right text-muted mx-1"></i>
-                      <span class="text-dark fw-semibold">New:</span> {{ t.newOwner || t.newOwnerUser?.fullName || 'Recipient' }}
+                      <span class="text-dark fw-semibold">New:</span> 
+                      {{ typeof t.newOwner === 'string' ? t.newOwner : t.newOwner?.fullName || t.newOwnerUser?.fullName || 'Recipient' }}
                     </div>
                     <div v-if="t.transferAmount" class="col-auto">
                       <span class="text-dark fw-semibold">Consideration:</span> KSh {{ Number(t.transferAmount).toLocaleString() }}
