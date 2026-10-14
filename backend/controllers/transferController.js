@@ -60,6 +60,28 @@ exports.initiateTransfer = async (req, res, next) => {
 
     await Promise.all(notificationPromises);
 
+    // Create audit log for transfer initiation
+    await AuditLog.create({
+      action: 'TRANSFER_INITIATED',
+      performedBy: req.user._id,
+      entityType: 'Transfer',
+      entityId: transfer._id,
+      details: {
+        parcelNumber: parcel.parcelNumber,
+        location: parcel.location,
+        transferType: transferType || 'sale',
+        previousOwner: req.user.fullName,
+        previousOwnerNationalId: req.user.nationalId,
+        newOwner: newOwner.fullName,
+        newOwnerNationalId: newOwner.nationalId,
+        transferAmount: Number(transferAmount) || 0,
+        notes: notes || '',
+        initiatedBy: req.user.fullName,
+        initiatedDate: new Date()
+      },
+      ipAddress: req.ip
+    });
+
     res.status(201).json({
       status: 'success',
       data: { transfer },
@@ -131,7 +153,11 @@ exports.getTransferById = async (req, res, next) => {
 // Approve Transfer
 exports.approveTransfer = async (req, res, next) => {
   try {
-    const transfer = await Transfer.findById(req.params.id);
+    const transfer = await Transfer.findById(req.params.id)
+      .populate('landParcel', 'parcelNumber location')
+      .populate('previousOwner', 'fullName nationalId')
+      .populate('newOwner', 'fullName nationalId');
+
     if (!transfer) {
       return res.status(404).json({
         status: 'error',
@@ -158,6 +184,27 @@ exports.approveTransfer = async (req, res, next) => {
       await parcel.save();
     }
 
+    // Create audit log for transfer approval
+    await AuditLog.create({
+      action: 'TRANSFER_APPROVED',
+      performedBy: req.user._id,
+      entityType: 'Transfer',
+      entityId: transfer._id,
+      details: {
+        parcelNumber: transfer.landParcel.parcelNumber,
+        location: transfer.landParcel.location,
+        transferType: transfer.transferType,
+        previousOwner: transfer.previousOwner.fullName,
+        previousOwnerNationalId: transfer.previousOwner.nationalId,
+        newOwner: transfer.newOwner.fullName,
+        newOwnerNationalId: transfer.newOwner.nationalId,
+        transferAmount: transfer.transferAmount,
+        approvedBy: req.user.fullName,
+        approvedDate: new Date()
+      },
+      ipAddress: req.ip
+    });
+
     res.status(200).json({
       status: 'success',
       message: 'Transfer approved and title successfully conveyed to new owner.'
@@ -171,7 +218,11 @@ exports.approveTransfer = async (req, res, next) => {
 exports.rejectTransfer = async (req, res, next) => {
   try {
     const { rejectionReason } = req.body;
-    const transfer = await Transfer.findById(req.params.id);
+    const transfer = await Transfer.findById(req.params.id)
+      .populate('landParcel', 'parcelNumber location')
+      .populate('previousOwner', 'fullName nationalId')
+      .populate('newOwner', 'fullName nationalId');
+
     if (!transfer) {
       return res.status(404).json({
         status: 'error',
@@ -188,6 +239,27 @@ exports.rejectTransfer = async (req, res, next) => {
     // Reset parcel status back to active
     await LandParcel.findByIdAndUpdate(transfer.landParcel, { status: 'active' });
 
+    // Create audit log for transfer rejection
+    await AuditLog.create({
+      action: 'TRANSFER_REJECTED',
+      performedBy: req.user._id,
+      entityType: 'Transfer',
+      entityId: transfer._id,
+      details: {
+        parcelNumber: transfer.landParcel.parcelNumber,
+        location: transfer.landParcel.location,
+        transferType: transfer.transferType,
+        previousOwner: transfer.previousOwner.fullName,
+        previousOwnerNationalId: transfer.previousOwner.nationalId,
+        newOwner: transfer.newOwner.fullName,
+        newOwnerNationalId: transfer.newOwner.nationalId,
+        rejectionReason: rejectionReason || 'Rejection specified by land officer',
+        rejectedBy: req.user.fullName,
+        rejectedDate: new Date()
+      },
+      ipAddress: req.ip
+    });
+
     res.status(200).json({
       status: 'success',
       message: 'Transfer request rejected.'
@@ -200,7 +272,11 @@ exports.rejectTransfer = async (req, res, next) => {
 // Cancel Transfer
 exports.cancelTransfer = async (req, res, next) => {
   try {
-    const transfer = await Transfer.findById(req.params.id);
+    const transfer = await Transfer.findById(req.params.id)
+      .populate('landParcel', 'parcelNumber location')
+      .populate('previousOwner', 'fullName nationalId')
+      .populate('newOwner', 'fullName nationalId');
+
     if (!transfer) {
       return res.status(404).json({
         status: 'error',
@@ -211,6 +287,26 @@ exports.cancelTransfer = async (req, res, next) => {
     transfer.status = 'cancelled';
     await transfer.save();
     await LandParcel.findByIdAndUpdate(transfer.landParcel, { status: 'active' });
+
+    // Create audit log for transfer cancellation
+    await AuditLog.create({
+      action: 'TRANSFER_CANCELLED',
+      performedBy: req.user._id,
+      entityType: 'Transfer',
+      entityId: transfer._id,
+      details: {
+        parcelNumber: transfer.landParcel.parcelNumber,
+        location: transfer.landParcel.location,
+        transferType: transfer.transferType,
+        previousOwner: transfer.previousOwner.fullName,
+        previousOwnerNationalId: transfer.previousOwner.nationalId,
+        newOwner: transfer.newOwner.fullName,
+        newOwnerNationalId: transfer.newOwner.nationalId,
+        cancelledBy: req.user.fullName,
+        cancelledDate: new Date()
+      },
+      ipAddress: req.ip
+    });
 
     res.status(200).json({
       status: 'success',
