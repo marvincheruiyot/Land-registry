@@ -10,6 +10,8 @@ exports.createParcel = async (req, res, next) => {
       titleDeedNumber,
       sizeInAcres,
       landUse,
+      ownershipType,
+      governmentLandDetails,
       location,
       ownerNationalId,
       boundaries,
@@ -17,12 +19,16 @@ exports.createParcel = async (req, res, next) => {
     } = req.body;
 
     let owner = null;
-    if (ownerNationalId) {
-      owner = await User.findOne({ nationalId: ownerNationalId });
-    }
-    if (!owner) {
-      // Fallback to current user if no owner found or provided
-      owner = req.user;
+    
+    // Only find owner for private land
+    if (ownershipType === 'private' || !ownershipType) {
+      if (ownerNationalId) {
+        owner = await User.findOne({ nationalId: ownerNationalId });
+      }
+      if (!owner) {
+        // Fallback to current user if no owner found or provided
+        owner = req.user;
+      }
     }
 
     const parcelData = {
@@ -30,6 +36,7 @@ exports.createParcel = async (req, res, next) => {
       titleDeedNumber: titleDeedNumber || undefined,
       sizeInAcres: Number(sizeInAcres) || 1,
       landUse: landUse || 'residential',
+      ownershipType: ownershipType || 'private',
       location: {
         county: location?.county || 'Nairobi',
         subCounty: location?.subCounty || '',
@@ -40,43 +47,84 @@ exports.createParcel = async (req, res, next) => {
           longitude: Number(location?.coordinates?.longitude) || 36.817223
         }
       },
-      currentOwner: owner._id,
       registeredBy: req.user._id,
       boundaries,
-      notes,
-      ownershipHistory: [
+      notes
+    };
+
+    // Add owner only for private land
+    if (ownershipType === 'private' || !ownershipType) {
+      parcelData.currentOwner = owner._id;
+      parcelData.ownershipHistory = [
         {
           owner: owner._id,
           acquiredDate: new Date(),
           transferMethod: 'initial_registration',
           notes: 'Initial cadastral parcel registration'
         }
-      ]
-    };
+      ];
+    }
+
+    // Add government land details if applicable
+    if (ownershipType && ownershipType !== 'private' && governmentLandDetails) {
+      parcelData.governmentLandDetails = {
+        status: governmentLandDetails.status || 'vacant',
+        allocatedTo: governmentLandDetails.allocatedTo || '',
+        allocationDate: governmentLandDetails.allocationDate || undefined,
+        intendedUse: governmentLandDetails.intendedUse || ''
+      };
+    }
 
     const parcel = await LandParcel.create(parcelData);
-    await parcel.populate('currentOwner', 'fullName email nationalId phoneNumber');
+    
+    // Populate owner only if it's private land
+    if (parcelData.currentOwner) {
+      await parcel.populate('currentOwner', 'fullName email nationalId phoneNumber');
+    }
 
     // Create audit log
+    const ownershipLabel = ownershipType === 'government' ? 'Government Land' : 
+                          ownershipType === 'county' ? 'County Government Land' :
+                          ownershipType === 'trust' ? 'Community/Trust Land' : 'Private Land';
+    
+    const description = ownershipType === 'private' || !ownershipType
+      ? `Land parcel ${parcelNumber} registered and assigned to ${owner.fullName}`
+      : `${ownershipLabel} parcel ${parcelNumber} registered`;
+
     await AuditLog.log({
       user: req.user._id,
       action: 'PARCEL_CREATED',
       entityType: 'LandParcel',
       entityId: parcel._id,
-      description: `Land parcel ${parcelNumber} registered and assigned to ${owner.fullName}`,
-      details: `Registered by ${req.user.fullName}. Owner: ${owner.fullName} (National ID: ${owner.nationalId}). Location: ${location?.county}. Size: ${sizeInAcres} acres. Land Use: ${landUse}`,
+      description,
+      details: `Registered by ${req.user.fullName}. Ownership Type: ${ownershipLabel}. Location: ${location?.county}. Size: ${sizeInAcres} acres.`,
       ipAddress: req.ip || req.connection?.remoteAddress || '127.0.0.1',
       userAgent: req.headers['user-agent'] || '',
       severity: 'info',
       metadata: {
         parcelNumber,
-        ownerName: owner.fullName,
-        ownerNationalId: owner.nationalId,
+        ownershipType: ownershipType || 'private',
         sizeInAcres,
         county: location?.county,
         landUse
       }
     });
+
+    // Create notification for land owner (only for private land)
+    if ((ownershipType === 'private' || !ownershipType) && owner) {
+      const Notification = require('../models/Notification');
+      await Notification.create({
+        recipient: owner._id,
+        type: 'SYSTEM_ALERT',
+        title: 'Land Parcel Registered Successfully',
+        message: `Your land parcel ${parcelNumber} in ${location?.county} has been successfully registered in the National Land Registry. Size: ${sizeInAcres} acres.`,
+        relatedEntity: {
+          entityType: 'LandParcel',
+          entityId: parcel._id
+        },
+        priority: 'high'
+      });
+    }
 
     res.status(201).json({
       status: 'success',

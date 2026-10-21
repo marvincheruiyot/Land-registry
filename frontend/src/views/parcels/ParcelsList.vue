@@ -61,8 +61,20 @@
                   </div>
                 </td>
                 <td>
-                  <div class="fw-semibold text-dark">{{ parcel.currentOwner?.fullName || parcel.owner || 'Government / Public' }}</div>
-                  <small class="text-muted">ID: {{ parcel.currentOwner?.nationalId || parcel.ownerNationalId || 'Verified' }}</small>
+                  <div v-if="parcel.ownershipType && parcel.ownershipType !== 'private'">
+                    <div class="fw-semibold text-primary">
+                      <i class="bi bi-building me-1"></i>
+                      {{ getOwnershipLabel(parcel.ownershipType) }}
+                    </div>
+                    <small v-if="parcel.governmentLandDetails?.allocatedTo" class="text-muted">
+                      Allocated to: {{ parcel.governmentLandDetails.allocatedTo }}
+                    </small>
+                    <small v-else class="text-muted">{{ parcel.governmentLandDetails?.status || 'Vacant' }}</small>
+                  </div>
+                  <div v-else>
+                    <div class="fw-semibold text-dark">{{ parcel.currentOwner?.fullName || 'Unknown Owner' }}</div>
+                    <small class="text-muted">ID: {{ parcel.currentOwner?.nationalId || 'N/A' }}</small>
+                  </div>
                 </td>
                 <td>
                   <span class="badge bg-light text-dark rounded-pill px-3 py-2 fw-semibold">
@@ -71,7 +83,7 @@
                 </td>
                 <td>
                   <span class="text-capitalize small text-muted">
-                    {{ parcel.landUse || 'Residential' }}
+                    {{ getDisplayLandUse(parcel) }}
                   </span>
                 </td>
                 <td>
@@ -137,6 +149,27 @@ export default {
       if (s === 'disputed') return 'badge-soft-red'
       if (s === 'transferred') return 'badge-soft-blue'
       return 'badge-soft-purple'
+    }
+
+    const getOwnershipLabel = (ownershipType) => {
+      const labels = {
+        'government': 'Government Land',
+        'county': 'County Government Land',
+        'trust': 'Community/Trust Land'
+      }
+      return labels[ownershipType] || 'Government Land'
+    }
+
+    const getDisplayLandUse = (parcel) => {
+      // For government land, use intended use from government details
+      if (parcel.ownershipType && parcel.ownershipType !== 'private') {
+        const intendedUse = parcel.governmentLandDetails?.intendedUse
+        if (intendedUse) {
+          return intendedUse.replace(/_/g, ' ')
+        }
+      }
+      // For private land, use regular landUse
+      return (parcel.landUse || 'Residential').replace(/_/g, ' ')
     }
 
     const loadParcels = async () => {
@@ -225,6 +258,8 @@ export default {
       isLandOfficer,
       isAdministrator,
       getStatusBadge,
+      getOwnershipLabel,
+      getDisplayLandUse,
       loadParcels,
       resetFilters
     }

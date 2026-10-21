@@ -44,7 +44,10 @@ const landParcelSchema = new mongoose.Schema({
   currentOwner: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: [true, 'Current owner is required']
+    required: function() {
+      // Only required for private land
+      return !this.ownershipType || this.ownershipType === 'private';
+    }
   },
   ownershipHistory: [{
     owner: {
@@ -71,6 +74,26 @@ const landParcelSchema = new mongoose.Schema({
   titleDeedNumber: {
     type: String,
     unique: true
+  },
+  ownershipType: {
+    type: String,
+    enum: ['private', 'government', 'county', 'trust'],
+    default: 'private'
+  },
+  governmentLandDetails: {
+    status: {
+      type: String,
+      enum: ['vacant', 'allocated', 'reserved']
+    },
+    allocatedTo: {
+      type: String,
+      trim: true
+    },
+    allocationDate: Date,
+    intendedUse: {
+      type: String,
+      enum: ['agricultural', 'residential', 'commercial', 'industrial', 'public_facility', 'mixed_use']
+    }
   },
   landUse: {
     type: String,

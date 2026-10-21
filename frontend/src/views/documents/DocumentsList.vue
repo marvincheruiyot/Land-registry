@@ -12,7 +12,8 @@
           <h1 class="fw-bold text-dark fs-2 mb-1">Documents & Deeds Vault</h1>
           <p class="text-muted mb-0">Secure storage for certified title deeds, cadastral maps, and sale conveyancing agreements.</p>
         </div>
-        <button @click="showUploadForOwnerModal = true" class="btn btn-pill btn-dark-pill">
+        <!-- Only show upload button for Officers, not Administrators -->
+        <button v-if="isOfficer" @click="showUploadForOwnerModal = true" class="btn btn-pill btn-dark-pill">
           <i class="bi bi-file-earmark-arrow-up me-1"></i> Upload Title Deed for Owner
         </button>
       </div>
@@ -38,30 +39,51 @@
         <div v-else class="row g-3">
           <div
             v-for="doc in documents"
-            :key="doc.id"
+            :key="doc._id"
             class="col-12 col-md-6 col-xl-4"
           >
             <div class="p-4 bg-light rounded-4 border h-100 d-flex flex-column justify-content-between">
               <div>
                 <div class="d-flex justify-content-between align-items-start mb-3">
                   <div class="avatar-circle bg-dark text-warning">
-                    <i :class="getDocumentIcon(doc.type)"></i>
+                    <i :class="getDocumentIcon(doc.documentType)"></i>
                   </div>
-                  <span class="badge badge-pill-custom badge-soft-green">
-                    <i class="bi bi-shield-fill-check"></i> Certified
+                  <span :class="['badge badge-pill-custom', getStatusBadgeClass(doc.verificationStatus)]">
+                    <i class="bi bi-shield-fill-check"></i> {{ doc.verificationStatus || 'Pending' }}
                   </span>
                 </div>
 
-                <h5 class="fw-bold text-dark text-truncate mb-1">{{ doc.name }}</h5>
-                <div class="text-muted small mb-2 text-capitalize">{{ formatType(doc.type) }}</div>
-                <div class="small text-muted mb-3">{{ doc.uploadDate || 'Uploaded recently' }}</div>
+                <h5 class="fw-bold text-dark text-truncate mb-1">{{ doc.documentName || doc.fileName }}</h5>
+                <div class="text-muted small mb-2 text-capitalize">{{ formatType(doc.documentType) }}</div>
+                
+                <!-- Owner Information -->
+                <div class="mb-2">
+                  <div v-if="doc.uploadedFor" class="small">
+                    <i class="bi bi-person-fill text-primary me-1"></i>
+                    <strong>Owner:</strong> {{ doc.uploadedFor.fullName }}
+                  </div>
+                  <div v-else-if="doc.uploadedBy" class="small">
+                    <i class="bi bi-person-fill text-primary me-1"></i>
+                    <strong>Owner:</strong> {{ doc.uploadedBy.fullName }}
+                  </div>
+                  <div v-if="doc.uploadedFor" class="small text-muted">
+                    <i class="bi bi-credit-card me-1"></i>
+                    ID: {{ doc.uploadedFor.nationalId }}
+                  </div>
+                  <div v-else-if="doc.uploadedBy && doc.uploadedBy.nationalId" class="small text-muted">
+                    <i class="bi bi-credit-card me-1"></i>
+                    ID: {{ doc.uploadedBy.nationalId }}
+                  </div>
+                </div>
+                
+                <div class="small text-muted mb-3">{{ formatDate(doc.createdAt) }}</div>
               </div>
 
               <div class="pt-3 border-top d-flex gap-2">
-                <button @click="viewDocument(doc.id)" class="btn btn-pill btn-light-pill btn-sm flex-grow-1 justify-content-center">
+                <button @click="viewDocument(doc)" class="btn btn-pill btn-light-pill btn-sm flex-grow-1 justify-content-center">
                   <i class="bi bi-eye"></i> View
                 </button>
-                <button @click="downloadDocument(doc.id)" class="btn btn-pill btn-dark-pill btn-sm flex-grow-1 justify-content-center">
+                <button @click="downloadDocument(doc)" class="btn btn-pill btn-dark-pill btn-sm flex-grow-1 justify-content-center">
                   <i class="bi bi-download"></i> Download
                 </button>
               </div>
@@ -238,7 +260,8 @@
 </template>
 
 <script>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useAuthStore } from '@/stores/auth'
 import Navbar from '@/components/Navbar.vue'
 import api from '@/services/api'
 
@@ -246,6 +269,11 @@ export default {
   name: 'DocumentsList',
   components: { Navbar },
   setup() {
+    const authStore = useAuthStore()
+    const currentUser = computed(() => authStore.user)
+    const isAdmin = computed(() => currentUser.value?.role === 'Administrator')
+    const isOfficer = computed(() => currentUser.value?.role === 'Land_Officer')
+    
     const documents = ref([])
     const loading = ref(true)
     const showUploadModal = ref(false)
@@ -289,46 +317,34 @@ export default {
     const formatType = (type) => {
       return (type || 'document').replace(/_/g, ' ')
     }
+    
+    const formatDate = (date) => {
+      if (!date) return 'N/A'
+      return new Date(date).toLocaleDateString('en-KE', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      })
+    }
+
+    const getStatusBadgeClass = (status) => {
+      const classes = {
+        'verified': 'badge-soft-green',
+        'pending': 'badge-soft-yellow',
+        'rejected': 'badge-soft-red'
+      }
+      return classes[status?.toLowerCase()] || 'badge-soft-blue'
+    }
 
     const loadDocuments = async () => {
       loading.value = true
       try {
         const response = await api.get('/documents')
-        documents.value = response.data?.data?.documents || response.data?.documents || [
-          {
-            id: 'doc-1',
-            name: 'Title_Deed_NAI_KIL_2026.pdf',
-            type: 'title_deed',
-            uploadDate: 'Sep 12, 2026'
-          },
-          {
-            id: 'doc-2',
-            name: 'Cadastral_Survey_Plan_MSA.pdf',
-            type: 'survey_map',
-            uploadDate: 'Sep 08, 2026'
-          },
-          {
-            id: 'doc-3',
-            name: 'Stamp_Duty_KRA_Receipt.pdf',
-            type: 'payment_receipt',
-            uploadDate: 'Aug 29, 2026'
-          }
-        ]
+        documents.value = response.data?.data?.documents || []
+        console.log('📄 Loaded documents:', documents.value)
       } catch (error) {
-        documents.value = [
-          {
-            id: 'doc-1',
-            name: 'Title_Deed_NAI_KIL_2026.pdf',
-            type: 'title_deed',
-            uploadDate: 'Sep 12, 2026'
-          },
-          {
-            id: 'doc-2',
-            name: 'Cadastral_Survey_Plan_MSA.pdf',
-            type: 'survey_map',
-            uploadDate: 'Sep 08, 2026'
-          }
-        ]
+        console.error('Error loading documents:', error)
+        documents.value = []
       } finally {
         loading.value = false
       }
@@ -362,22 +378,37 @@ export default {
       }
     }
 
-    const viewDocument = (docId) => {
-      window.open(`/api/v1/documents/${docId}/view`, '_blank')
+    const viewDocument = async (doc) => {
+      try {
+        const response = await api.get(`/documents/${doc._id}/view`, { 
+          responseType: 'blob' 
+        })
+        
+        const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/pdf' })
+        const url = window.URL.createObjectURL(blob)
+        window.open(url, '_blank')
+        
+        setTimeout(() => window.URL.revokeObjectURL(url), 100)
+      } catch (err) {
+        console.error('View error:', err)
+        alert('Unable to view document. Please try again.')
+      }
     }
 
-    const downloadDocument = async (docId) => {
+    const downloadDocument = async (doc) => {
       try {
-        const response = await api.get(`/documents/${docId}/download`, { responseType: 'blob' })
+        const response = await api.get(`/documents/${doc._id}/download`, { responseType: 'blob' })
         const url = window.URL.createObjectURL(new Blob([response.data]))
         const link = document.createElement('a')
         link.href = url
-        link.setAttribute('download', `deed-${docId}.pdf`)
+        link.setAttribute('download', doc.documentName || doc.fileName || `document-${doc._id}.pdf`)
         document.body.appendChild(link)
         link.click()
         link.remove()
+        window.URL.revokeObjectURL(url)
       } catch (err) {
-        alert('Downloading document...')
+        console.error('Download error:', err)
+        alert('Unable to download document. Please try again.')
       }
     }
 
@@ -498,6 +529,9 @@ export default {
     })
 
     return {
+      currentUser,
+      isAdmin,
+      isOfficer,
       documents,
       loading,
       showUploadModal,
@@ -515,6 +549,8 @@ export default {
       ownerUploadForm,
       getDocumentIcon,
       formatType,
+      formatDate,
+      getStatusBadgeClass,
       handleFileSelect,
       uploadDocument,
       viewDocument,

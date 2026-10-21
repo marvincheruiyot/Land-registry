@@ -57,9 +57,10 @@
                   />
                 </div>
 
-                <div class="col-md-6">
+                <!-- Only show Land Use for Private Land -->
+                <div v-if="form.ownershipType === 'private'" class="col-md-6">
                   <label class="form-label fw-semibold text-dark">Land Use Classification *</label>
-                  <select v-model="form.landUse" class="form-select rounded-pill py-2 bg-light border-0" required>
+                  <select v-model="form.landUse" class="form-select rounded-pill py-2 bg-light border-0" :required="form.ownershipType === 'private'">
                     <option value="">Select use</option>
                     <option value="residential">Residential</option>
                     <option value="commercial">Commercial</option>
@@ -68,6 +69,69 @@
                     <option value="mixed">Mixed Development</option>
                   </select>
                 </div>
+
+                <div class="col-md-6">
+                  <label class="form-label fw-semibold text-dark">Ownership Type *</label>
+                  <select v-model="form.ownershipType" @change="onOwnershipTypeChange" class="form-select rounded-pill py-2 bg-light border-0" required>
+                    <option value="private">Private Land</option>
+                    <option value="government">Government Land</option>
+                    <option value="county">County Government Land</option>
+                    <option value="trust">Community/Trust Land</option>
+                  </select>
+                </div>
+
+                <!-- Government Land Details (conditional) -->
+                <template v-if="form.ownershipType !== 'private'">
+                  <div class="col-12">
+                    <div class="p-3 bg-info-subtle rounded-4 mb-2">
+                      <h6 class="fw-bold text-dark mb-2">
+                        <i class="bi bi-info-circle me-2"></i>{{ getOwnershipLabel() }} Details
+                      </h6>
+                    </div>
+                  </div>
+
+                  <div class="col-md-4">
+                    <label class="form-label fw-semibold text-dark">Current Status *</label>
+                    <select v-model="form.governmentLandDetails.status" class="form-select rounded-pill py-2 bg-light border-0" required>
+                      <option value="vacant">Vacant (Not Allocated)</option>
+                      <option value="allocated">Allocated/Leased</option>
+                      <option value="reserved">Reserved</option>
+                    </select>
+                  </div>
+
+                  <div class="col-md-4">
+                    <label class="form-label fw-semibold text-dark">Intended Land Use *</label>
+                    <select v-model="form.governmentLandDetails.intendedUse" class="form-select rounded-pill py-2 bg-light border-0" required>
+                      <option value="">Select use</option>
+                      <option value="agricultural">Agricultural</option>
+                      <option value="residential">Residential</option>
+                      <option value="commercial">Commercial</option>
+                      <option value="industrial">Industrial</option>
+                      <option value="public_facility">Public Facility</option>
+                      <option value="mixed_use">Mixed Use</option>
+                    </select>
+                  </div>
+
+                  <div class="col-md-4">
+                    <label class="form-label fw-semibold text-dark">Allocated To {{ form.governmentLandDetails.status === 'allocated' ? '*' : '(Optional)' }}</label>
+                    <input
+                      v-model="form.governmentLandDetails.allocatedTo"
+                      type="text"
+                      class="form-control rounded-pill py-2 bg-light border-0"
+                      placeholder="Name of leaseholder or entity"
+                      :required="form.governmentLandDetails.status === 'allocated'"
+                    />
+                  </div>
+
+                  <div class="col-md-4" v-if="form.governmentLandDetails.status === 'allocated'">
+                    <label class="form-label fw-semibold text-dark">Allocation Date</label>
+                    <input
+                      v-model="form.governmentLandDetails.allocationDate"
+                      type="date"
+                      class="form-control rounded-pill py-2 bg-light border-0"
+                    />
+                  </div>
+                </template>
               </div>
 
               <!-- Location Details -->
@@ -137,17 +201,27 @@
               <!-- Registered Proprietor -->
               <h5 class="fw-bold text-dark mb-3">3. Registered Proprietor</h5>
               <div class="row g-3 mb-4">
-                <div class="col-md-6">
+                <!-- Only show Owner National ID for Private Land -->
+                <div v-if="form.ownershipType === 'private'" class="col-md-6">
                   <label class="form-label fw-semibold text-dark">Owner National ID *</label>
                   <input
                     v-model="form.ownerNationalId"
                     type="text"
                     class="form-control rounded-pill py-2 bg-light border-0"
                     placeholder="e.g. 12345678"
-                    required
+                    :required="form.ownershipType === 'private'"
                   />
                   <small class="text-muted">Owner must be registered with a verified account in the system.</small>
                 </div>
+
+                <!-- Show info message for government land -->
+                <div v-else class="col-12">
+                  <div class="p-3 bg-warning-subtle rounded-4">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Note:</strong> {{ getOwnershipLabel() }} does not require an owner National ID. The land is owned by the {{ form.ownershipType === 'government' ? 'National Government' : form.ownershipType === 'county' ? 'County Government' : 'Community Trust' }}.
+                  </div>
+                </div>
+
                 <div class="col-md-6">
                   <label class="form-label fw-semibold text-dark">Additional Notes</label>
                   <textarea
@@ -207,43 +281,81 @@ export default {
       'Busia', 'Siaya', 'Kisumu', 'Homa Bay', 'Migori', 'Kisii', 'Nyamira'
     ]
 
-    // Sub-counties by county (sample data - add more as needed)
+    // Sub-counties by county
     const subCountiesMap = {
       'Nairobi': ['Westlands', 'Dagoretti North', 'Dagoretti South', 'Langata', 'Kibra', 'Roysambu', 'Kasarani', 'Ruaraka', 'Embakasi South', 'Embakasi North', 'Embakasi Central', 'Embakasi East', 'Embakasi West', 'Makadara', 'Kamukunji', 'Starehe', 'Mathare'],
       'Mombasa': ['Changamwe', 'Jomvu', 'Kisauni', 'Nyali', 'Likoni', 'Mvita'],
       'Kiambu': ['Gatundu South', 'Gatundu North', 'Juja', 'Thika Town', 'Ruiru', 'Githunguri', 'Kiambu', 'Kiambaa', 'Kabete', 'Kikuyu', 'Limuru', 'Lari'],
       'Nakuru': ['Nakuru Town East', 'Nakuru Town West', 'Gilgil', 'Naivasha', 'Molo', 'Njoro', 'Rongai', 'Subukia', 'Kuresoi South', 'Kuresoi North', 'Bahati'],
+      'Kericho': ['Ainamoi', 'Bureti', 'Belgut', 'Sigowet/Soin', 'Soin', 'Kipkelion East', 'Kipkelion West'],
       'Uasin Gishu': ['Ainabkoi', 'Kapseret', 'Kesses', 'Moiben', 'Soy', 'Turbo'],
       'Machakos': ['Machakos Town', 'Athi River', 'Kangundo', 'Matungulu', 'Kathiani', 'Mavoko', 'Masinga', 'Yatta'],
       'Kisumu': ['Kisumu East', 'Kisumu West', 'Kisumu Central', 'Seme', 'Nyando', 'Muhoroni', 'Nyakach']
     }
 
-    // Wards by sub-county (sample data for major sub-counties)
+    // Wards by sub-county
     const wardsMap = {
-      // Nairobi - Westlands
-      'Westlands': ['Kitisuru', 'Parklands', 'Highridge', 'Karura', 'Kangemi'],
+      // NAIROBI COUNTY - All 17 Sub-Counties
+      'Westlands': ['Kitisuru', 'Parklands/Highridge', 'Karura', 'Kangemi', 'Mountain View'],
       'Dagoretti North': ['Kilimani', 'Kawangware', 'Gatina', 'Kileleshwa', 'Kabiro'],
+      'Dagoretti South': ['Mutu-ini', 'Ngando', 'Riruta', 'Uthiru/Ruthimitu', 'Waithaka'],
       'Langata': ['Karen', 'Nairobi West', 'Mugumoini', 'South C', 'Nyayo Highrise'],
-      'Kibra': ['Laini Saba', 'Lindi', 'Makina', 'Woodley', 'Sarang\'ombe'],
-      
-      // Kiambu
-      'Ruiru': ['Biashara', 'Gatongora', 'Kahawa Sukari', 'Kahawa Wendani', 'Kiuu', 'Mwiki', 'Mwihoko'],
+      'Kibra': ['Laini Saba', 'Lindi', 'Makina', 'Woodley/Kenyatta Golf Course', 'Sarang\'ombe'],
+      'Roysambu': ['Githurai', 'Kahawa West', 'Zimmerman', 'Roysambu', 'Kahawa'],
+      'Kasarani': ['Clay City', 'Mwiki', 'Kasarani', 'Njiru', 'Ruai'],
+      'Ruaraka': ['Baba Dogo', 'Utalii', 'Mathare North', 'Lucky Summer', 'Korogocho'],
+      'Embakasi South': ['Imara Daima', 'Kwa Njenga', 'Kwa Reuben', 'Pipeline', 'Kware'],
+      'Embakasi North': ['Kariobangi North', 'Dandora Area I', 'Dandora Area II', 'Dandora Area III', 'Dandora Area IV'],
+      'Embakasi Central': ['Kayole North', 'Kayole Central', 'Kayole South', 'Komarock', 'Matopeni/Spring Valley'],
+      'Embakasi East': ['Upper Savannah', 'Lower Savannah', 'Embakasi', 'Utawala', 'Mihango'],
+      'Embakasi West': ['Umoja I', 'Umoja II', 'Mowlem', 'Kariobangi South'],
+      'Makadara': ['Maringo/Hamza', 'Viwandani', 'Harambee', 'Makongeni'],
+      'Kamukunji': ['Pumwani', 'Eastleigh North', 'Eastleigh South', 'Airbase', 'California'],
+      'Starehe': ['Nairobi Central', 'Ngara', 'Pangani', 'Ziwani/Kariokor', 'Landimawe', 'Nairobi South'],
+      'Mathare': ['Hospital', 'Mabatini', 'Huruma', 'Ngei', 'Mlango Kubwa', 'Kiamaiko'],
+
+      // MOMBASA COUNTY - All 6 Sub-Counties
+      'Changamwe': ['Port Reitz', 'Kipevu', 'Airport', 'Changamwe', 'Chaani'],
+      'Jomvu': ['Jomvu Kuu', 'Miritini', 'Mikindani'],
+      'Kisauni': ['Mjambere', 'Junda', 'Bamburi', 'Mwakirunge', 'Mtopanga', 'Magogoni', 'Shanzu'],
+      'Nyali': ['Frere Town', 'Ziwa La Ng\'ombe', 'Mkomani', 'Kongowea', 'Kadzandani'],
+      'Likoni': ['Mtongwe', 'Shika Adabu', 'Bofu', 'Likoni', 'Timbwani'],
+      'Mvita': ['Mji wa Kale/Makadara', 'Tudor', 'Tononoka', 'Shimanzi/Ganjoni', 'Majengo', 'Mkomani'],
+
+      // KIAMBU COUNTY - All 12 Sub-Counties
+      'Gatundu South': ['Kiamwangi', 'Kiganjo', 'Ndarugu', 'Ngenda', 'Kakuzi/Mitubiri'],
+      'Gatundu North': ['Gituamba', 'Githobokoni', 'Chania', 'Mang\'u'],
+      'Juja': ['Murera', 'Theta', 'Juja', 'Witeithie', 'Kalimoni'],
       'Thika Town': ['Township', 'Kamenu', 'Hospital', 'Gatuanyaga', 'Ngoliba'],
+      'Ruiru': ['Biashara', 'Gatongora', 'Kahawa Sukari', 'Kahawa Wendani', 'Kiuu', 'Mwiki', 'Mwihoko'],
+      'Githunguri': ['Githunguri', 'Githiga', 'Ikinu', 'Ngewa', 'Komothai'],
       'Kiambu': ['Ndumberi', 'Riabai', 'Ting\'ang\'a'],
-      
-      // Nakuru
-      'Nakuru Town East': ['Biashara', 'Flamingo', 'Menengai West', 'Nakuru East'],
-      'Nakuru Town West': ['Barut', 'London', 'Kaptembwo', 'Kapkures', 'Rhonda'],
-      'Naivasha': ['Mai Mahiu', 'Naivasha East', 'Viwandani', 'Hells Gate', 'Olkaria'],
-      
-      // Uasin Gishu
-      'Kapseret': ['Simat/Kapseret', 'Kipkenyo', 'Ngeria', 'Megun'],
-      'Ainabkoi': ['Olare', 'Kapsoya', 'Kaptagat', 'Ainabkoi/Olare'],
-      
-      // Mombasa
-      'Mvita': ['Mji wa Kale/Makadara', 'Tudor', 'Tononoka', 'Shimanzi/Ganjoni', 'Majengo'],
-      'Nyali': ['Frere Town', 'Ziwa La Ng\'ombe', 'Mkomani', 'Kongowea'],
-      'Kisauni': ['Mjambere', 'Junda', 'Bamburi', 'Mwakirunge', 'Mtopanga']
+      'Kiambaa': ['Ndenderu', 'Mucatha', 'Kihara', 'Cianda', 'Karuri'],
+      'Kabete': ['Gitaru', 'Muguga', 'Nyadhuna', 'Kabete', 'Uthiru'],
+      'Kikuyu': ['Kikuyu', 'Kinoo', 'Nachu', 'Sigona', 'Karai'],
+      'Limuru': ['Ndeiya', 'Limuru Central', 'Limuru East', 'Ngecha Tigoni', 'Limuru West'],
+      'Lari': ['Kinale', 'Kijabe', 'Nyanduma', 'Kamburu', 'Lari/Kirenga'],
+
+      // NAKURU COUNTY - All 11 Sub-Counties
+      'Nakuru Town East': ['Biashara', 'Flamingo', 'Menengai West', 'Nakuru East', 'Kivumbini'],
+      'Nakuru Town West': ['Barut', 'London', 'Kaptembwo', 'Kapkures', 'Rhonda', 'Shaabab', 'Mwariki'],
+      'Gilgil': ['Gilgil', 'Elementaita', 'Mbaruk/Eburu', 'Malewa West', 'Murindati'],
+      'Naivasha': ['Mai Mahiu', 'Naivasha East', 'Viwandani', 'Hells Gate', 'Olkaria', 'Maiella', 'Lakeview'],
+      'Molo': ['Molo', 'Elburgon', 'Turi', 'Mariashoni'],
+      'Njoro': ['Mauche', 'Kihingo', 'Nessuit', 'Lare', 'Njoro'],
+      'Rongai': ['Menengai', 'Rongai', 'Soin', 'Mosop', 'Solai'],
+      'Subukia': ['Subukia', 'Kabazi', 'Waseges', 'Kabage'],
+      'Kuresoi South': ['Amalo', 'Keringet', 'Kiptagich', 'Tinet'],
+      'Kuresoi North': ['Kamara', 'Kiptororo', 'Sirikwa', 'Nyota'],
+      'Bahati': ['Bahati', 'Dundori', 'Kiamaina', 'Lanet/Umoja', 'Nakuru'],
+
+      // KERICHO COUNTY - All 6 Sub-Counties
+      'Ainamoi': ['Ainamoi', 'Kapkugerwet', 'Kapsoit', 'Kipchebor', 'Kipchimchim', 'Kapsuser'],
+      'Bureti': ['Kisiara', 'Tebesonik', 'Cheboin', 'Chemosot', 'Litein', 'Cheplanget'],
+      'Belgut': ['Waldai', 'Kabianga', 'Cheptororiet/Seretut', 'Chaik'],
+      'Sigowet/Soin': ['Sigowet', 'Kaplelartet', 'Soliat', 'Soin'],
+      'Kipkelion East': ['Londiani', 'Kedowa/Kimugul', 'Tendeno/Sorget', 'Chilchila'],
+      'Kipkelion West': ['Kunyak', 'Kamasian', 'Kipkelion', 'Kunyak']
     }
 
     const availableSubCounties = computed(() => {
@@ -270,6 +382,13 @@ export default {
       titleDeedNumber: '',
       sizeInAcres: null,
       landUse: '',
+      ownershipType: 'private',
+      governmentLandDetails: {
+        status: 'vacant',
+        allocatedTo: '',
+        allocationDate: '',
+        intendedUse: ''
+      },
       location: {
         county: '',
         subCounty: '',
@@ -284,6 +403,27 @@ export default {
       boundaries: { north: '', south: '', east: '', west: '' },
       notes: ''
     })
+
+    const getOwnershipLabel = () => {
+      const labels = {
+        'government': 'Government Land',
+        'county': 'County Government Land',
+        'trust': 'Community/Trust Land'
+      }
+      return labels[form.value.ownershipType] || 'Government Land'
+    }
+
+    const onOwnershipTypeChange = () => {
+      // Reset government land details when changing ownership type
+      if (form.value.ownershipType === 'private') {
+        form.value.governmentLandDetails = {
+          status: 'vacant',
+          allocatedTo: '',
+          allocationDate: '',
+          intendedUse: ''
+        }
+      }
+    }
 
     const handleSubmit = async () => {
       loading.value = true
@@ -316,6 +456,8 @@ export default {
       availableWards,
       onCountyChange,
       onSubCountyChange,
+      onOwnershipTypeChange,
+      getOwnershipLabel,
       handleSubmit
     }
   }

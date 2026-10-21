@@ -99,7 +99,7 @@ exports.getDocuments = async (req, res, next) => {
     // Admins and Officers see all documents
 
     const documents = await Document.find(query)
-      .populate('uploadedBy', 'fullName email')
+      .populate('uploadedBy', 'fullName email nationalId')
       .populate('uploadedFor', 'fullName email nationalId')
       .sort({ createdAt: -1 });
 
@@ -229,6 +229,32 @@ exports.deleteDocument = async (req, res, next) => {
     res.status(200).json({
       status: 'success',
       message: 'Document deleted'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Verify Document (mark as verified)
+exports.verifyDocument = async (req, res, next) => {
+  try {
+    const document = await Document.findByIdAndUpdate(
+      req.params.id,
+      { verificationStatus: 'verified' },
+      { new: true }
+    );
+
+    if (!document) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Document not found'
+      });
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: { document },
+      message: 'Document verified successfully'
     });
   } catch (error) {
     next(error);

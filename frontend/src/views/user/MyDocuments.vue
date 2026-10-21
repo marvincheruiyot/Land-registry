@@ -433,6 +433,17 @@ export default {
         
         // Clean up after a delay
         setTimeout(() => window.URL.revokeObjectURL(url), 100)
+        
+        // Update document status to verified after viewing
+        if (doc.verificationStatus === 'pending') {
+          try {
+            await api.put(`/documents/${doc._id}/verify`)
+            // Refresh documents to show updated status
+            await fetchDocuments()
+          } catch (err) {
+            console.error('Error updating document status:', err)
+          }
+        }
       } catch (err) {
         console.error('View error:', err)
         alert('Unable to view document. Please try again.')

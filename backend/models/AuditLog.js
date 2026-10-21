@@ -24,8 +24,14 @@ const auditLogSchema = new mongoose.Schema({
     default: ''
   },
   details: {
-    type: String,
-    default: ''
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+  },
+  performedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: false,
+    default: null
   },
   changes: {
     before: mongoose.Schema.Types.Mixed,
@@ -59,7 +65,12 @@ const auditLogSchema = new mongoose.Schema({
 
 auditLogSchema.pre('save', function(next) {
   if (!this.description && this.details) {
-    this.description = this.details;
+    // If details is an object, try to create a meaningful description
+    if (typeof this.details === 'object') {
+      this.description = `${this.action} - ${JSON.stringify(this.details).substring(0, 100)}`;
+    } else {
+      this.description = this.details;
+    }
   }
   if (!this.description) {
     this.description = `Activity recorded: ${this.action}`;
