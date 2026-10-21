@@ -101,26 +101,44 @@ exports.getDocuments = async (req, res, next) => {
     const documents = await Document.find(query)
       .populate('uploadedBy', 'fullName email')
       .populate('uploadedFor', 'fullName email nationalId')
-      .populate({
-        path: 'relatedEntity.entityId',
-        select: 'parcelNumber location currentOwner'
-      })
       .sort({ createdAt: -1 });
 
-    // Return documents with proper structure for frontend
-    const formattedDocuments = documents.map(doc => ({
-      _id: doc._id,
-      documentName: doc.originalName,
-      documentType: doc.documentType,
-      fileName: doc.fileName,
-      fileSize: doc.fileSize,
-      fileUrl: doc.filePath ? `/uploads/${doc.fileName}` : null,
-      uploadedBy: doc.uploadedBy,
-      uploadedFor: doc.uploadedFor,
-      landParcel: doc.relatedEntity?.entityType === 'LandParcel' ? doc.relatedEntity.entityId : null,
-      verificationStatus: doc.verificationStatus || 'pending',
-      createdAt: doc.createdAt,
-      updatedAt: doc.updatedAt
+    // Manually populate relatedEntity for LandParcel types
+    const LandParcel = require('../models/LandParcel');
+    
+    const formattedDocuments = await Promise.all(documents.map(async (doc) => {
+      const baseDoc = {
+        _id: doc._id,
+        documentName: doc.originalName,
+        documentType: doc.documentType,
+        fileName: doc.fileName,
+        fileSize: doc.fileSize,
+        fileUrl: doc.filePath ? `/uploads/${doc.fileName}` : null,
+        uploadedBy: doc.uploadedBy,
+        uploadedFor: doc.uploadedFor,
+        verificationStatus: doc.verificationStatus || 'pending',
+        description: doc.description,
+        createdAt: doc.createdAt,
+        updatedAt: doc.updatedAt,
+        relatedEntity: doc.relatedEntity
+      };
+
+      // Manually fetch and populate landParcel if it's a LandParcel entity
+      if (doc.relatedEntity?.entityType === 'LandParcel' && doc.relatedEntity.entityId) {
+        try {
+          const parcel = await LandParcel.findById(doc.relatedEntity.entityId)
+            .select('parcelNumber location currentOwner titleDeedNumber')
+            .lean();
+          baseDoc.landParcel = parcel;
+        } catch (err) {
+          console.error('Error populating landParcel:', err);
+          baseDoc.landParcel = null;
+        }
+      } else {
+        baseDoc.landParcel = null;
+      }
+
+      return baseDoc;
     }));
 
     res.status(200).json({

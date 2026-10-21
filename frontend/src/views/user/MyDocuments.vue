@@ -120,7 +120,9 @@
                   <span class="badge bg-light text-dark px-2 py-1 text-capitalize">{{ formatType(doc.documentType) }}</span>
                 </td>
                 <td class="py-3">
-                  <div class="small">{{ doc.landParcel?.parcelNumber || 'N/A' }}</div>
+                  <div class="small">
+                    {{ getParcelInfo(doc) }}
+                  </div>
                 </td>
                 <td class="py-3">
                   <small class="text-muted">{{ formatDate(doc.createdAt) }}</small>
@@ -294,13 +296,17 @@ export default {
               isRecipient,
               ownsParcel,
               uploadedFor: d.uploadedFor,
-              uploadedBy: d.uploadedBy
+              uploadedBy: d.uploadedBy,
+              landParcel: d.landParcel,
+              relatedEntity: d.relatedEntity,
+              description: d.description
             })
             
             return isUploader || isRecipient || ownsParcel
           })
           
           console.log(`✅ Filtered ${documents.value.length} documents for user`)
+          console.log('Documents:', documents.value)
         }
       } catch (err) {
         console.error('Error fetching documents:', err)
@@ -363,17 +369,73 @@ export default {
       return classes[status?.toLowerCase()] || 'bg-secondary text-white'
     }
 
-    const downloadDocument = (doc) => {
-      if (doc.fileUrl) {
-        window.open(doc.fileUrl, '_blank')
+    const getParcelInfo = (doc) => {
+      // Check if document has landParcel populated
+      if (doc.landParcel?.parcelNumber) {
+        return doc.landParcel.parcelNumber
+      }
+      
+      // Check if relatedEntity is populated with full object
+      if (doc.relatedEntity?.entityId?.parcelNumber) {
+        return doc.relatedEntity.entityId.parcelNumber
+      }
+      
+      // Extract from description if present
+      if (doc.description) {
+        // Try to match parcel number pattern
+        const match = doc.description.match(/([A-Z]{2,3}\/[A-Z]{2,3}\/\d{4}\/\d+)/i)
+        if (match) {
+          return match[1]
+        }
+        
+        // Also try to extract if it says "Title deed for parcel XYZ"
+        const match2 = doc.description.match(/for parcel ([^\s]+)/i)
+        if (match2) {
+          return match2[1]
+        }
+      }
+      
+      return 'Not Specified'
+    }
+
+    const downloadDocument = async (doc) => {
+      try {
+        const response = await api.get(`/documents/${doc._id}/download`, { 
+          responseType: 'blob' 
+        })
+        
+        // Create blob link to download
+        const url = window.URL.createObjectURL(new Blob([response.data]))
+        const link = document.createElement('a')
+        link.href = url
+        link.setAttribute('download', doc.documentName || doc.fileName || `document-${doc._id}.pdf`)
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        window.URL.revokeObjectURL(url)
+      } catch (err) {
+        console.error('Download error:', err)
+        alert('Unable to download document. Please try again.')
       }
     }
 
-    const viewDocument = (doc) => {
-      if (doc._id) {
-        window.open(`/api/v1/documents/${doc._id}/view`, '_blank')
-      } else if (doc.fileUrl) {
-        window.open(doc.fileUrl, '_blank')
+    const viewDocument = async (doc) => {
+      try {
+        // Fetch document with authentication, then open it
+        const response = await api.get(`/documents/${doc._id}/view`, { 
+          responseType: 'blob' 
+        })
+        
+        // Create blob URL and open in new tab
+        const blob = new Blob([response.data], { type: response.headers['content-type'] || 'application/pdf' })
+        const url = window.URL.createObjectURL(blob)
+        window.open(url, '_blank')
+        
+        // Clean up after a delay
+        setTimeout(() => window.URL.revokeObjectURL(url), 100)
+      } catch (err) {
+        console.error('View error:', err)
+        alert('Unable to view document. Please try again.')
       }
     }
 
@@ -502,6 +564,7 @@ export default {
       getFileIcon,
       getFileColor,
       getStatusClass,
+      getParcelInfo,
       showUploadModal,
       uploadForm,
       uploading,
