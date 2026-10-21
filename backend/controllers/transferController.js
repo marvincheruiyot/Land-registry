@@ -71,6 +71,19 @@ exports.initiateTransfer = async (req, res, next) => {
 
     await Promise.all(notificationPromises);
 
+    // Also notify the transfer initiator (owner) for confirmation
+    await Notification.create({
+      recipient: req.user._id,
+      type: 'TRANSFER_INITIATED',
+      title: 'Transfer Request Submitted',
+      message: `Your transfer request for parcel ${parcel.parcelNumber} has been submitted successfully. Land officers will review your request shortly.`,
+      relatedEntity: {
+        entityType: 'Transfer',
+        entityId: transfer._id
+      },
+      priority: 'medium'
+    });
+
     // Create audit log for transfer initiation
     await AuditLog.create({
       action: 'TRANSFER_INITIATED',
@@ -216,6 +229,32 @@ exports.approveTransfer = async (req, res, next) => {
       ipAddress: req.ip
     });
 
+    // Notify the previous owner (seller)
+    await Notification.create({
+      recipient: transfer.previousOwner._id,
+      type: 'TRANSFER_APPROVED',
+      title: 'Transfer Approved',
+      message: `Your transfer request for parcel ${transfer.landParcel.parcelNumber} has been approved. The ownership has been transferred to ${transfer.newOwner.fullName}.`,
+      relatedEntity: {
+        entityType: 'Transfer',
+        entityId: transfer._id
+      },
+      priority: 'high'
+    });
+
+    // Notify the new owner (buyer)
+    await Notification.create({
+      recipient: transfer.newOwner._id,
+      type: 'TRANSFER_APPROVED',
+      title: 'Land Parcel Received',
+      message: `Congratulations! You are now the registered owner of parcel ${transfer.landParcel.parcelNumber}. The transfer from ${transfer.previousOwner.fullName} has been completed.`,
+      relatedEntity: {
+        entityType: 'LandParcel',
+        entityId: transfer.landParcel._id
+      },
+      priority: 'high'
+    });
+
     res.status(200).json({
       status: 'success',
       message: 'Transfer approved and title successfully conveyed to new owner.'
@@ -269,6 +308,32 @@ exports.rejectTransfer = async (req, res, next) => {
         rejectedDate: new Date()
       },
       ipAddress: req.ip
+    });
+
+    // Notify the previous owner (seller)
+    await Notification.create({
+      recipient: transfer.previousOwner._id,
+      type: 'TRANSFER_REJECTED',
+      title: 'Transfer Request Rejected',
+      message: `Your transfer request for parcel ${transfer.landParcel.parcelNumber} has been rejected. Reason: ${rejectionReason || 'Not specified'}. You may contact land registry for more information.`,
+      relatedEntity: {
+        entityType: 'Transfer',
+        entityId: transfer._id
+      },
+      priority: 'high'
+    });
+
+    // Notify the new owner (buyer) 
+    await Notification.create({
+      recipient: transfer.newOwner._id,
+      type: 'TRANSFER_REJECTED',
+      title: 'Transfer Request Rejected',
+      message: `The transfer request for parcel ${transfer.landParcel.parcelNumber} from ${transfer.previousOwner.fullName} has been rejected. Reason: ${rejectionReason || 'Not specified'}.`,
+      relatedEntity: {
+        entityType: 'Transfer',
+        entityId: transfer._id
+      },
+      priority: 'medium'
     });
 
     res.status(200).json({

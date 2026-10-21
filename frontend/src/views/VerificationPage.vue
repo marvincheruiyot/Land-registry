@@ -45,17 +45,17 @@
             <form @submit.prevent="handleVerify" class="mb-4">
               <div class="mb-3">
                 <label class="form-label fw-semibold text-dark">
-                  {{ searchType === 'token' ? 'Digital Deed Verification Token' : 'Official Land Parcel ID' }}
+                  {{ searchType === 'token' ? 'Title Deed Number' : 'Official Land Parcel ID' }}
                 </label>
                 <div class="input-group">
                   <span class="input-group-text bg-light border-0 ps-3">
-                    <i :class="searchType === 'token' ? 'bi bi-qr-code text-muted' : 'bi bi-geo text-muted'"></i>
+                    <i :class="searchType === 'token' ? 'bi bi-file-earmark-text text-muted' : 'bi bi-geo text-muted'"></i>
                   </span>
                   <input
                     v-model="searchQuery"
                     type="text"
                     class="form-control bg-light border-0 py-3"
-                    :placeholder="searchType === 'token' ? 'Enter 32+ character verification token...' : 'e.g. NAIROBI/BLOCK12/1234'"
+                    :placeholder="searchType === 'token' ? 'e.g., IR/2026/0994 or title deed number' : 'e.g. NAI/KIL/2026/04'"
                     required
                   />
                   <button type="submit" :disabled="loading" class="btn btn-pill btn-dark-pill px-4">

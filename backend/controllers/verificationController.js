@@ -1,16 +1,19 @@
 const LandParcel = require('../models/LandParcel');
 
-// Verify title by token
+// Verify title by deed number (title deed number)
 exports.verifyByToken = async (req, res, next) => {
   try {
     const { token } = req.params;
-    const parcel = await LandParcel.findOne({ verificationToken: token })
-      .populate('currentOwner', 'fullName nationalId email');
+    
+    // Search by title deed number instead of cryptographic token
+    const parcel = await LandParcel.findOne({ 
+      titleDeedNumber: { $regex: new RegExp(`^${token.trim()}$`, 'i') } 
+    }).populate('currentOwner', 'fullName nationalId email');
 
     if (!parcel) {
       return res.status(404).json({
         status: 'error',
-        message: 'No title deed found matching this cryptographic verification token.'
+        message: 'No title deed found with this number. Please verify the deed number and try again.'
       });
     }
 
@@ -18,11 +21,16 @@ exports.verifyByToken = async (req, res, next) => {
       status: 'success',
       data: {
         parcelNumber: parcel.parcelNumber,
+        titleDeedNumber: parcel.titleDeedNumber,
         ownerName: parcel.currentOwner?.fullName || 'Government / Public',
-        location: parcel.location?.county || 'Kenya',
+        location: `${parcel.location?.ward || ''} ${parcel.location?.subCounty || ''} ${parcel.location?.county || 'Kenya'}`.trim(),
+        county: parcel.location?.county,
         size: parcel.sizeInAcres,
+        sizeInAcres: parcel.sizeInAcres,
+        landUse: parcel.landUse,
         status: parcel.status,
-        registrationDate: parcel.registrationDate ? new Date(parcel.registrationDate).toLocaleDateString() : 'Active'
+        registrationDate: parcel.registrationDate ? new Date(parcel.registrationDate).toLocaleDateString() : new Date(parcel.createdAt).toLocaleDateString(),
+        currentOwner: parcel.currentOwner
       }
     });
   } catch (error) {

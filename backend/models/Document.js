@@ -41,6 +41,11 @@ const documentSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  uploadedFor: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    // Not required - only used when officer uploads for a specific owner
+  },
   relatedEntity: {
     entityType: {
       type: String,

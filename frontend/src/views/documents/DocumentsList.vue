@@ -12,6 +12,9 @@
           <h1 class="fw-bold text-dark fs-2 mb-1">Documents & Deeds Vault</h1>
           <p class="text-muted mb-0">Secure storage for certified title deeds, cadastral maps, and sale conveyancing agreements.</p>
         </div>
+        <button @click="showUploadForOwnerModal = true" class="btn btn-pill btn-dark-pill">
+          <i class="bi bi-file-earmark-arrow-up me-1"></i> Upload Title Deed for Owner
+        </button>
       </div>
 
       <!-- Vault Grid -->
@@ -134,6 +137,103 @@
         </div>
       </div>
     </div>
+
+    <!-- Upload for Owner Modal -->
+    <div
+      v-if="showUploadForOwnerModal"
+      class="modal fade show d-block"
+      style="background: rgba(0,0,0,0.5);"
+      tabindex="-1"
+    >
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 border-0 p-3 p-md-4">
+          <div class="modal-header border-0 pb-0">
+            <h5 class="fw-bold text-dark mb-0">Upload Title Deed for New Owner</h5>
+            <button type="button" class="btn-close" @click="closeOwnerModal"></button>
+          </div>
+          <div class="modal-body">
+            <form @submit.prevent="uploadForOwner" class="space-y-3">
+              <div class="mb-3">
+                <label class="form-label fw-semibold text-dark">Select Owner (National ID) *</label>
+                <input
+                  v-model="ownerUploadForm.ownerNationalId"
+                  @blur="fetchOwnerDetails"
+                  type="text"
+                  class="form-control rounded-pill py-2 bg-light border-0"
+                  placeholder="Enter owner's National ID"
+                  required
+                />
+                <small v-if="selectedOwner" class="text-success d-block mt-1">
+                  <i class="bi bi-check-circle-fill"></i> {{ selectedOwner.fullName }} ({{ selectedOwner.email }})
+                </small>
+                <small v-if="fetchingOwner" class="text-muted d-block mt-1">
+                  <span class="spinner-border spinner-border-sm me-1"></span> Looking up owner...
+                </small>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-semibold text-dark">Related Parcel Number</label>
+                <select
+                  v-model="ownerUploadForm.parcelId"
+                  class="form-select rounded-pill py-2 bg-light border-0"
+                  :disabled="!selectedOwner || ownerParcels.length === 0"
+                >
+                  <option value="">Select parcel (optional)</option>
+                  <option v-for="parcel in ownerParcels" :key="parcel._id" :value="parcel._id">
+                    {{ parcel.parcelNumber }} - {{ parcel.location?.county }}{{ parcel.location?.subCounty ? ', ' + parcel.location.subCounty : '' }}
+                  </option>
+                </select>
+                <small v-if="selectedOwner && ownerParcels.length === 0" class="text-muted d-block mt-1">
+                  No parcels found for this owner
+                </small>
+                <small v-if="loadingParcels" class="text-muted d-block mt-1">
+                  <span class="spinner-border spinner-border-sm me-1"></span> Loading parcels...
+                </small>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-semibold text-dark">Title Deed File *</label>
+                <input
+                  type="file"
+                  @change="handleOwnerFileSelect"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  class="form-control rounded-pill py-2 bg-light border-0"
+                  required
+                />
+                <small class="text-muted">PDF, JPG, or PNG (Max 10MB)</small>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-semibold text-dark">Notes</label>
+                <textarea
+                  v-model="ownerUploadForm.description"
+                  class="form-control rounded-4 bg-light border-0"
+                  rows="2"
+                  placeholder="Transfer details or remarks"
+                ></textarea>
+              </div>
+
+              <div v-if="ownerUploadError" class="p-3 bg-danger-subtle text-danger rounded-3 small mb-3">
+                {{ ownerUploadError }}
+              </div>
+
+              <div v-if="ownerUploadSuccess" class="p-3 bg-success-subtle text-success rounded-3 small mb-3">
+                {{ ownerUploadSuccess }}
+              </div>
+
+              <div class="d-flex gap-2">
+                <button type="submit" :disabled="uploadingForOwner" class="btn btn-pill btn-dark-pill flex-grow-1 justify-content-center">
+                  {{ uploadingForOwner ? 'Uploading...' : 'Upload Title Deed' }}
+                </button>
+                <button type="button" @click="closeOwnerModal" class="btn btn-pill btn-light-pill">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -152,8 +252,25 @@ export default {
     const uploading = ref(false)
     const uploadError = ref(null)
 
+    // Upload for Owner
+    const showUploadForOwnerModal = ref(false)
+    const uploadingForOwner = ref(false)
+    const ownerUploadError = ref(null)
+    const ownerUploadSuccess = ref(null)
+    const selectedOwner = ref(null)
+    const fetchingOwner = ref(false)
+    const ownerParcels = ref([])
+    const loadingParcels = ref(false)
+
     const uploadForm = ref({
       type: '',
+      file: null,
+      description: ''
+    })
+
+    const ownerUploadForm = ref({
+      ownerNationalId: '',
+      parcelId: '',
       file: null,
       description: ''
     })
@@ -264,6 +381,118 @@ export default {
       }
     }
 
+    const fetchOwnerDetails = async () => {
+      if (!ownerUploadForm.value.ownerNationalId) return
+      
+      fetchingOwner.value = true
+      ownerUploadError.value = null
+      selectedOwner.value = null
+      ownerParcels.value = []
+      
+      try {
+        const response = await api.get(`/users/by-national-id/${ownerUploadForm.value.ownerNationalId}`)
+        selectedOwner.value = response.data?.data?.user || response.data?.user
+        
+        // Fetch owner's parcels
+        if (selectedOwner.value) {
+          await fetchOwnerParcels(selectedOwner.value._id)
+        }
+      } catch (err) {
+        selectedOwner.value = null
+        ownerParcels.value = []
+        ownerUploadError.value = 'Owner not found. Please verify the National ID.'
+      } finally {
+        fetchingOwner.value = false
+      }
+    }
+
+    const fetchOwnerParcels = async (ownerId) => {
+      loadingParcels.value = true
+      try {
+        const response = await api.get('/parcels')
+        if (response.data?.data?.parcels) {
+          // Filter for this owner's parcels
+          ownerParcels.value = response.data.data.parcels.filter(p => 
+            p.currentOwner?._id === ownerId || p.currentOwner === ownerId
+          )
+          console.log(`Found ${ownerParcels.value.length} parcels for owner`)
+        }
+      } catch (err) {
+        console.error('Error fetching owner parcels:', err)
+        ownerParcels.value = []
+      } finally {
+        loadingParcels.value = false
+      }
+    }
+
+    const handleOwnerFileSelect = (e) => {
+      ownerUploadForm.value.file = e.target.files[0]
+    }
+
+    const uploadForOwner = async () => {
+      if (!selectedOwner.value) {
+        ownerUploadError.value = 'Please enter a valid National ID first.'
+        return
+      }
+
+      uploadingForOwner.value = true
+      ownerUploadError.value = null
+      ownerUploadSuccess.value = null
+
+      try {
+        const formData = new FormData()
+        formData.append('documentType', 'title_deed')
+        formData.append('file', ownerUploadForm.value.file)
+        
+        // Get parcel number from selected parcel if available
+        let parcelNumber = ''
+        if (ownerUploadForm.value.parcelId) {
+          const selectedParcel = ownerParcels.value.find(p => p._id === ownerUploadForm.value.parcelId)
+          parcelNumber = selectedParcel?.parcelNumber || ''
+        }
+        
+        formData.append('description', ownerUploadForm.value.description || `Title deed for ${parcelNumber || 'parcel'}`)
+        formData.append('uploadedFor', selectedOwner.value._id || selectedOwner.value.id)
+        
+        if (ownerUploadForm.value.parcelId) {
+          formData.append('parcelNumber', parcelNumber)
+          formData.append('landParcelId', ownerUploadForm.value.parcelId)
+        }
+
+        await api.post('/documents/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        })
+
+        ownerUploadSuccess.value = `Title deed uploaded successfully for ${selectedOwner.value.fullName}!`
+        
+        setTimeout(() => {
+          closeOwnerModal()
+          loadDocuments()
+        }, 2000)
+      } catch (err) {
+        console.error('Upload error:', err)
+        ownerUploadError.value = err.response?.data?.message || 'Failed to upload document. Please try again.'
+      } finally {
+        uploadingForOwner.value = false
+      }
+    }
+
+    const closeOwnerModal = () => {
+      showUploadForOwnerModal.value = false
+      ownerUploadForm.value = {
+        ownerNationalId: '',
+        parcelId: '',
+        file: null,
+        description: ''
+      }
+      selectedOwner.value = null
+      ownerParcels.value = []
+      ownerUploadError.value = null
+      ownerUploadSuccess.value = null
+      fetchingOwner.value = false
+      loadingParcels.value = false
+    }
+
     onMounted(() => {
       loadDocuments()
     })
@@ -275,12 +504,25 @@ export default {
       uploading,
       uploadError,
       uploadForm,
+      showUploadForOwnerModal,
+      uploadingForOwner,
+      ownerUploadError,
+      ownerUploadSuccess,
+      selectedOwner,
+      fetchingOwner,
+      ownerParcels,
+      loadingParcels,
+      ownerUploadForm,
       getDocumentIcon,
       formatType,
       handleFileSelect,
       uploadDocument,
       viewDocument,
-      downloadDocument
+      downloadDocument,
+      fetchOwnerDetails,
+      handleOwnerFileSelect,
+      uploadForOwner,
+      closeOwnerModal
     }
   }
 }

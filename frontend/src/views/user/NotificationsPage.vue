@@ -140,10 +140,26 @@ export default {
 
       if (filterType.value === 'unread') {
         filtered = filtered.filter(n => !n.read)
-      } else if (filterType.value !== 'all') {
+      } else if (filterType.value === 'parcel') {
+        // Filter by parcel-related notifications
         filtered = filtered.filter(n => {
-          const action = n.action?.toLowerCase() || ''
-          return action.includes(filterType.value)
+          const action = n.action?.toUpperCase() || ''
+          const entityType = n.entityType?.toUpperCase() || ''
+          return action.includes('PARCEL') || entityType.includes('PARCEL') || entityType === 'LANDPARCEL'
+        })
+      } else if (filterType.value === 'transfer') {
+        // Filter by transfer-related notifications
+        filtered = filtered.filter(n => {
+          const action = n.action?.toUpperCase() || ''
+          const entityType = n.entityType?.toUpperCase() || ''
+          return action.includes('TRANSFER') || entityType.includes('TRANSFER')
+        })
+      } else if (filterType.value === 'document') {
+        // Filter by document-related notifications
+        filtered = filtered.filter(n => {
+          const action = n.action?.toUpperCase() || ''
+          const entityType = n.entityType?.toUpperCase() || ''
+          return action.includes('DOCUMENT') || entityType.includes('DOCUMENT')
         })
       }
 
@@ -153,55 +169,86 @@ export default {
     const fetchNotifications = async () => {
       loading.value = true
       try {
-        // Fetch only notifications for the current user
-        const response = await api.get(`/audit-logs?user=${user.value.id}&limit=50`)
-        if (response.data?.data?.logs) {
-          // Map audit logs to notifications - only logs where user is the subject
-          notifications.value = response.data.data.logs
-            .filter(log => {
-              // Only show logs that are about this user or directed to this user
-              return log.user && (log.user._id === user.value.id || log.user === user.value.id)
-            })
-            .map(log => ({
-              _id: log._id,
-              action: log.action,
-              description: log.description || log.details || 'System activity',
-              entityType: log.entityType || log.resourceType,
-              createdAt: log.createdAt,
-              read: getReadStatus(log._id)
-            }))
+        // Fetch from the proper notifications endpoint
+        const response = await api.get('/notifications?limit=100')
+        
+        console.log('📬 Notifications API response:', response.data)
+        
+        if (response.data?.data?.notifications) {
+          notifications.value = response.data.data.notifications.map(notif => ({
+            _id: notif._id,
+            action: notif.type || 'NOTIFICATION',
+            description: notif.message || 'System notification',
+            title: notif.title || getNotificationTitle(notif.type),
+            entityType: notif.relatedEntity?.entityType || 'System',
+            createdAt: notif.createdAt,
+            read: notif.isRead || false
+          }))
 
           // Sort by date (newest first)
           notifications.value.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+          
+          console.log('✅ Loaded', notifications.value.length, 'notifications')
+          console.log('Sample notification:', notifications.value[0])
+        } else {
+          console.warn('⚠️ No notifications in response')
         }
       } catch (err) {
-        console.error('Error fetching notifications:', err)
-        // If the API doesn't support user filtering, try getting all and filter client-side
+        console.error('❌ Error fetching notifications:', err)
+        console.error('Error response:', err.response?.data)
+        
+        // Fallback: try to get audit logs for this user
         try {
-          const response = await api.get('/audit-logs?limit=50')
+          console.log('🔄 Falling back to audit logs...')
+          const response = await api.get('/audit-logs?limit=100')
           if (response.data?.data?.logs) {
+            // Filter and map audit logs to notifications
+            const userId = user.value.id || user.value._id
             notifications.value = response.data.data.logs
               .filter(log => {
-                // Filter to only show notifications where the current user is the subject
-                return log.user && (log.user._id === user.value.id || log.user === user.value.id)
+                // Only show logs related to this user
+                const isPerformedByUser = log.performedBy === userId || log.performedBy?._id === userId
+                const isUserInvolved = log.user === userId || log.user?._id === userId
+                const isOwnerInvolved = log.details?.previousOwner === user.value.fullName || 
+                                       log.details?.newOwner === user.value.fullName
+                
+                return isPerformedByUser || isUserInvolved || isOwnerInvolved
               })
               .map(log => ({
                 _id: log._id,
                 action: log.action,
-                description: log.description || log.details || 'System activity',
-                entityType: log.entityType || log.resourceType,
+                description: log.description || formatAuditLogDescription(log),
+                entityType: log.entityType || log.resourceType || 'System',
                 createdAt: log.createdAt,
                 read: getReadStatus(log._id)
               }))
             
             notifications.value.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            console.log('✅ Loaded', notifications.value.length, 'audit log notifications')
           }
         } catch (fallbackErr) {
-          console.error('Fallback error:', fallbackErr)
+          console.error('❌ Fallback error:', fallbackErr)
         }
       } finally {
         loading.value = false
       }
+    }
+
+    const formatAuditLogDescription = (log) => {
+      if (log.description) return log.description
+      
+      const details = log.details || {}
+      if (log.action?.includes('TRANSFER')) {
+        if (log.action === 'TRANSFER_INITIATED') {
+          return `Transfer initiated from ${details.previousOwner || 'owner'} to ${details.newOwner || 'new owner'} for ${details.parcelNumber || 'parcel'}`
+        } else if (log.action === 'TRANSFER_APPROVED') {
+          return `Transfer approved for ${details.parcelNumber || 'parcel'}`
+        } else if (log.action === 'TRANSFER_REJECTED') {
+          return `Transfer rejected for ${details.parcelNumber || 'parcel'}: ${details.rejectionReason || 'no reason'}`
+        }
+      }
+      
+      return log.action || 'System activity'
     }
 
     const getReadStatus = (notifId) => {

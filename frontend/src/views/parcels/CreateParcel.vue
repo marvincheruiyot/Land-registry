@@ -75,33 +75,40 @@
               <div class="row g-3 mb-4">
                 <div class="col-md-4">
                   <label class="form-label fw-semibold text-dark">County *</label>
-                  <input
+                  <select
                     v-model="form.location.county"
-                    type="text"
-                    class="form-control rounded-pill py-2 bg-light border-0"
-                    placeholder="e.g., Nairobi"
+                    @change="onCountyChange"
+                    class="form-select rounded-pill py-2 bg-light border-0"
                     required
-                  />
+                  >
+                    <option value="">Select County</option>
+                    <option v-for="county in counties" :key="county" :value="county">{{ county }}</option>
+                  </select>
                 </div>
 
                 <div class="col-md-4">
                   <label class="form-label fw-semibold text-dark">Sub-County</label>
-                  <input
+                  <select
                     v-model="form.location.subCounty"
-                    type="text"
-                    class="form-control rounded-pill py-2 bg-light border-0"
-                    placeholder="e.g., Westlands"
-                  />
+                    @change="onSubCountyChange"
+                    :disabled="!form.location.county"
+                    class="form-select rounded-pill py-2 bg-light border-0"
+                  >
+                    <option value="">Select Sub-County</option>
+                    <option v-for="subCounty in availableSubCounties" :key="subCounty" :value="subCounty">{{ subCounty }}</option>
+                  </select>
                 </div>
 
                 <div class="col-md-4">
                   <label class="form-label fw-semibold text-dark">Ward / Registration Section</label>
-                  <input
+                  <select
                     v-model="form.location.ward"
-                    type="text"
-                    class="form-control rounded-pill py-2 bg-light border-0"
-                    placeholder="e.g., Parklands"
-                  />
+                    :disabled="!form.location.subCounty"
+                    class="form-select rounded-pill py-2 bg-light border-0"
+                  >
+                    <option value="">Select Ward</option>
+                    <option v-for="ward in availableWards" :key="ward" :value="ward">{{ ward }}</option>
+                  </select>
                 </div>
 
                 <div class="col-md-6">
@@ -175,7 +182,7 @@
 </template>
 
 <script>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Navbar from '@/components/Navbar.vue'
 import api from '@/services/api'
@@ -188,6 +195,75 @@ export default {
     const loading = ref(false)
     const error = ref(null)
     const success = ref(null)
+
+    // Kenyan Counties
+    const counties = [
+      'Nairobi', 'Mombasa', 'Kwale', 'Kilifi', 'Tana River', 'Lamu', 'Taita-Taveta',
+      'Garissa', 'Wajir', 'Mandera', 'Marsabit', 'Isiolo', 'Meru', 'Tharaka-Nithi',
+      'Embu', 'Kitui', 'Machakos', 'Makueni', 'Nyandarua', 'Nyeri', 'Kirinyaga',
+      'Murang\'a', 'Kiambu', 'Turkana', 'West Pokot', 'Samburu', 'Trans-Nzoia',
+      'Uasin Gishu', 'Elgeyo-Marakwet', 'Nandi', 'Baringo', 'Laikipia', 'Nakuru',
+      'Narok', 'Kajiado', 'Kericho', 'Bomet', 'Kakamega', 'Vihiga', 'Bungoma',
+      'Busia', 'Siaya', 'Kisumu', 'Homa Bay', 'Migori', 'Kisii', 'Nyamira'
+    ]
+
+    // Sub-counties by county (sample data - add more as needed)
+    const subCountiesMap = {
+      'Nairobi': ['Westlands', 'Dagoretti North', 'Dagoretti South', 'Langata', 'Kibra', 'Roysambu', 'Kasarani', 'Ruaraka', 'Embakasi South', 'Embakasi North', 'Embakasi Central', 'Embakasi East', 'Embakasi West', 'Makadara', 'Kamukunji', 'Starehe', 'Mathare'],
+      'Mombasa': ['Changamwe', 'Jomvu', 'Kisauni', 'Nyali', 'Likoni', 'Mvita'],
+      'Kiambu': ['Gatundu South', 'Gatundu North', 'Juja', 'Thika Town', 'Ruiru', 'Githunguri', 'Kiambu', 'Kiambaa', 'Kabete', 'Kikuyu', 'Limuru', 'Lari'],
+      'Nakuru': ['Nakuru Town East', 'Nakuru Town West', 'Gilgil', 'Naivasha', 'Molo', 'Njoro', 'Rongai', 'Subukia', 'Kuresoi South', 'Kuresoi North', 'Bahati'],
+      'Uasin Gishu': ['Ainabkoi', 'Kapseret', 'Kesses', 'Moiben', 'Soy', 'Turbo'],
+      'Machakos': ['Machakos Town', 'Athi River', 'Kangundo', 'Matungulu', 'Kathiani', 'Mavoko', 'Masinga', 'Yatta'],
+      'Kisumu': ['Kisumu East', 'Kisumu West', 'Kisumu Central', 'Seme', 'Nyando', 'Muhoroni', 'Nyakach']
+    }
+
+    // Wards by sub-county (sample data for major sub-counties)
+    const wardsMap = {
+      // Nairobi - Westlands
+      'Westlands': ['Kitisuru', 'Parklands', 'Highridge', 'Karura', 'Kangemi'],
+      'Dagoretti North': ['Kilimani', 'Kawangware', 'Gatina', 'Kileleshwa', 'Kabiro'],
+      'Langata': ['Karen', 'Nairobi West', 'Mugumoini', 'South C', 'Nyayo Highrise'],
+      'Kibra': ['Laini Saba', 'Lindi', 'Makina', 'Woodley', 'Sarang\'ombe'],
+      
+      // Kiambu
+      'Ruiru': ['Biashara', 'Gatongora', 'Kahawa Sukari', 'Kahawa Wendani', 'Kiuu', 'Mwiki', 'Mwihoko'],
+      'Thika Town': ['Township', 'Kamenu', 'Hospital', 'Gatuanyaga', 'Ngoliba'],
+      'Kiambu': ['Ndumberi', 'Riabai', 'Ting\'ang\'a'],
+      
+      // Nakuru
+      'Nakuru Town East': ['Biashara', 'Flamingo', 'Menengai West', 'Nakuru East'],
+      'Nakuru Town West': ['Barut', 'London', 'Kaptembwo', 'Kapkures', 'Rhonda'],
+      'Naivasha': ['Mai Mahiu', 'Naivasha East', 'Viwandani', 'Hells Gate', 'Olkaria'],
+      
+      // Uasin Gishu
+      'Kapseret': ['Simat/Kapseret', 'Kipkenyo', 'Ngeria', 'Megun'],
+      'Ainabkoi': ['Olare', 'Kapsoya', 'Kaptagat', 'Ainabkoi/Olare'],
+      
+      // Mombasa
+      'Mvita': ['Mji wa Kale/Makadara', 'Tudor', 'Tononoka', 'Shimanzi/Ganjoni', 'Majengo'],
+      'Nyali': ['Frere Town', 'Ziwa La Ng\'ombe', 'Mkomani', 'Kongowea'],
+      'Kisauni': ['Mjambere', 'Junda', 'Bamburi', 'Mwakirunge', 'Mtopanga']
+    }
+
+    const availableSubCounties = computed(() => {
+      return subCountiesMap[form.value.location.county] || []
+    })
+
+    const availableWards = computed(() => {
+      return wardsMap[form.value.location.subCounty] || []
+    })
+
+    const onCountyChange = () => {
+      // Reset sub-county and ward when county changes
+      form.value.location.subCounty = ''
+      form.value.location.ward = ''
+    }
+
+    const onSubCountyChange = () => {
+      // Reset ward when sub-county changes
+      form.value.location.ward = ''
+    }
 
     const form = ref({
       parcelNumber: '',
@@ -235,8 +311,30 @@ export default {
       loading,
       error,
       success,
+      counties,
+      availableSubCounties,
+      availableWards,
+      onCountyChange,
+      onSubCountyChange,
       handleSubmit
     }
   }
 }
 </script>
+
+<style scoped>
+/* Force dropdown menus to appear below the select element */
+select.form-select {
+  position: relative;
+}
+
+/* Ensure proper stacking context for dropdowns */
+.row {
+  position: relative;
+  z-index: 1;
+}
+
+.form-select:focus {
+  z-index: 10;
+}
+</style>

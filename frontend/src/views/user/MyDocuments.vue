@@ -108,6 +108,11 @@
                     <div>
                       <div class="fw-semibold small">{{ doc.documentName || 'Untitled Document' }}</div>
                       <small class="text-muted">{{ doc.fileName }}</small>
+                      <div v-if="doc.uploadedFor && doc.uploadedFor._id === user.id" class="mt-1">
+                        <span class="badge bg-info text-white" style="font-size: 0.65rem;">
+                          <i class="bi bi-person-check-fill me-1"></i>Uploaded by Officer for You
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </td>
@@ -272,11 +277,30 @@ export default {
       loading.value = true
       try {
         const response = await api.get('/documents')
+        console.log('📄 Documents API Response:', response.data)
+        
         if (response.data?.data?.documents) {
-          // Filter documents for current user's parcels
-          documents.value = response.data.data.documents.filter(d => 
-            d.uploadedBy?._id === user.value.id || d.landParcel?.currentOwner === user.value.id
-          )
+          // Owner sees documents where:
+          // 1. They uploaded it themselves (uploadedBy)
+          // 2. It was uploaded FOR them by an officer (uploadedFor)
+          // 3. It's linked to their parcel (landParcel.currentOwner)
+          documents.value = response.data.data.documents.filter(d => {
+            const isUploader = d.uploadedBy?._id === user.value.id
+            const isRecipient = d.uploadedFor?._id === user.value.id
+            const ownsParcel = d.landParcel?.currentOwner === user.value.id
+            
+            console.log(`Document ${d.documentName}:`, {
+              isUploader,
+              isRecipient,
+              ownsParcel,
+              uploadedFor: d.uploadedFor,
+              uploadedBy: d.uploadedBy
+            })
+            
+            return isUploader || isRecipient || ownsParcel
+          })
+          
+          console.log(`✅ Filtered ${documents.value.length} documents for user`)
         }
       } catch (err) {
         console.error('Error fetching documents:', err)

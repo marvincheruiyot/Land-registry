@@ -119,7 +119,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onActivated } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import Navbar from '@/components/Navbar.vue'
 import api from '@/services/api'
@@ -222,6 +222,11 @@ export default {
     }
 
     onMounted(() => {
+      loadTransfers()
+    })
+
+    // Also refresh when navigating back to this page
+    onActivated(() => {
       loadTransfers()
     })
 

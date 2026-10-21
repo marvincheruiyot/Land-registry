@@ -209,7 +209,7 @@
         <div v-if="auditLogs.length > 0" class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 mt-4 pt-3 border-top">
           <div class="d-flex align-items-center gap-3">
             <small class="text-muted">
-              Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to {{ Math.min(currentPage * itemsPerPage, auditTotal) }} of {{ auditTotal }} records
+              Showing {{ (currentPage - 1) * itemsPerPage + 1 }} to {{ Math.min(currentPage * itemsPerPage, totalRecords.value) }} of {{ totalRecords.value }} records
             </small>
             <div class="d-flex align-items-center gap-2">
               <label class="text-muted small mb-0">Items per page:</label>
@@ -289,6 +289,7 @@ export default {
     const currentPage = ref(1)
     const itemsPerPage = ref(20)
     const totalRecords = ref(0)
+    const allRecordsCount = ref(0) // Track total count before filtering
     
     const auditStats = ref({
       todayCount: 0,
@@ -296,7 +297,7 @@ export default {
       criticalCount: 0
     })
 
-    const auditTotal = computed(() => totalRecords.value)
+    const auditTotal = computed(() => allRecordsCount.value) // Use all records, not filtered
     const totalPages = computed(() => Math.ceil(totalRecords.value / itemsPerPage.value))
     const displayedLogs = computed(() => {
       let filtered = [...auditLogs.value]
@@ -383,6 +384,9 @@ export default {
         if (response.data?.data?.logs) {
           auditLogs.value = response.data.data.logs
           
+          // Set total count before any filtering
+          allRecordsCount.value = auditLogs.value.length
+          
           // Reset to first page when filters change
           if (!forceRefresh) {
             currentPage.value = 1
@@ -396,13 +400,22 @@ export default {
             new Date(log.createdAt).toDateString() === today
           ).length
 
-          auditStats.value.transferCount = auditLogs.value.filter(log => 
-            log.action?.includes('TRANSFER')
-          ).length
+          // Count transfer-related actions (case-insensitive)
+          auditStats.value.transferCount = auditLogs.value.filter(log => {
+            const action = log.action?.toUpperCase() || ''
+            return action.includes('TRANSFER')
+          }).length
 
           auditStats.value.criticalCount = auditLogs.value.filter(log => 
             log.severity?.toLowerCase() === 'error' || log.severity?.toLowerCase() === 'critical'
           ).length
+          
+          console.log('📊 Audit Stats:', {
+            total: allRecordsCount.value,
+            today: auditStats.value.todayCount,
+            transfers: auditStats.value.transferCount,
+            critical: auditStats.value.criticalCount
+          })
         }
       } catch (err) {
         console.error('Error loading audit logs:', err)
@@ -508,6 +521,7 @@ export default {
       currentPage,
       itemsPerPage,
       totalPages,
+      totalRecords,
       hasFilters,
       loadAuditLogs,
       resetFilters,

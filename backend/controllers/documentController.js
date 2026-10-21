@@ -6,7 +6,7 @@ const crypto = require('crypto');
 // Upload Document
 exports.uploadDocument = async (req, res, next) => {
   try {
-    const { documentType, description, landParcelId } = req.body;
+    const { documentType, description, landParcelId, uploadedFor, parcelNumber } = req.body;
     const file = req.file;
 
     if (!file) {
@@ -16,14 +16,17 @@ exports.uploadDocument = async (req, res, next) => {
       });
     }
 
-    if (!landParcelId) {
+    // For officer uploading for owner (after transfer), landParcelId is optional
+    // For regular uploads, landParcelId is required
+    if (!uploadedFor && !landParcelId) {
       return res.status(400).json({
         status: 'error',
         message: 'Please select a land parcel'
       });
     }
 
-    const doc = await Document.create({
+    // Create document data
+    const docData = {
       documentType: documentType || 'other',
       fileName: file.filename,
       originalName: file.originalname,
@@ -32,20 +35,47 @@ exports.uploadDocument = async (req, res, next) => {
       filePath: file.path,
       checksum: crypto.randomBytes(16).toString('hex'),
       uploadedBy: req.user._id,
-      relatedEntity: {
+      description: description || (parcelNumber ? `Title deed for parcel ${parcelNumber}` : '')
+    };
+
+    // If officer is uploading for a specific owner
+    if (uploadedFor) {
+      docData.uploadedFor = uploadedFor;
+      
+      // If a parcel is also specified, link to parcel, otherwise link to user
+      if (landParcelId) {
+        docData.relatedEntity = {
+          entityType: 'LandParcel',
+          entityId: landParcelId
+        };
+      } else {
+        docData.relatedEntity = {
+          entityType: 'User',
+          entityId: uploadedFor
+        };
+      }
+    } else {
+      // Regular upload - related to land parcel
+      docData.relatedEntity = {
         entityType: 'LandParcel',
         entityId: landParcelId
-      },
-      description
-    });
+      };
+    }
+
+    const doc = await Document.create(docData);
 
     // Populate for response
     await doc.populate('uploadedBy', 'fullName email');
+    if (doc.uploadedFor) {
+      await doc.populate('uploadedFor', 'fullName email nationalId');
+    }
 
     res.status(201).json({
       status: 'success',
       data: { document: doc },
-      message: 'Document uploaded successfully and will be reviewed by administrators and officers'
+      message: uploadedFor 
+        ? 'Title deed uploaded successfully for the owner' 
+        : 'Document uploaded successfully and will be reviewed by administrators and officers'
     });
   } catch (error) {
     next(error);
@@ -57,14 +87,20 @@ exports.getDocuments = async (req, res, next) => {
   try {
     const query = {};
     
-    // Land Owners only see their own documents
+    // Land Owners see:
+    // 1. Documents they uploaded themselves
+    // 2. Documents uploaded FOR them by officers (uploadedFor field)
     if (req.user?.role === 'Land_Owner') {
-      query.uploadedBy = req.user._id;
+      query.$or = [
+        { uploadedBy: req.user._id },
+        { uploadedFor: req.user._id }
+      ];
     }
     // Admins and Officers see all documents
 
     const documents = await Document.find(query)
       .populate('uploadedBy', 'fullName email')
+      .populate('uploadedFor', 'fullName email nationalId')
       .populate({
         path: 'relatedEntity.entityId',
         select: 'parcelNumber location currentOwner'
@@ -80,6 +116,7 @@ exports.getDocuments = async (req, res, next) => {
       fileSize: doc.fileSize,
       fileUrl: doc.filePath ? `/uploads/${doc.fileName}` : null,
       uploadedBy: doc.uploadedBy,
+      uploadedFor: doc.uploadedFor,
       landParcel: doc.relatedEntity?.entityType === 'LandParcel' ? doc.relatedEntity.entityId : null,
       verificationStatus: doc.verificationStatus || 'pending',
       createdAt: doc.createdAt,

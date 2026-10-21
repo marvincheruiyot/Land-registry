@@ -34,6 +34,38 @@ exports.updateProfile = async (req, res, next) => {
   }
 };
 
+// Get User by National ID
+exports.getUserByNationalId = async (req, res, next) => {
+  try {
+    const { nationalId } = req.params;
+    
+    const user = await User.findOne({ nationalId });
+    
+    if (!user) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'User not found with this National ID'
+      });
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: { 
+        user: {
+          _id: user._id,
+          fullName: user.fullName,
+          email: user.email,
+          nationalId: user.nationalId,
+          phoneNumber: user.phoneNumber,
+          role: user.role
+        }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Notifications
 exports.getNotifications = async (req, res, next) => {
   try {
