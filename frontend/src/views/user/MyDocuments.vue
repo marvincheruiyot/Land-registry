@@ -108,7 +108,7 @@
                     <div>
                       <div class="fw-semibold small">{{ doc.documentName || 'Untitled Document' }}</div>
                       <small class="text-muted">{{ doc.fileName }}</small>
-                      <div v-if="doc.uploadedFor && doc.uploadedFor._id === user.id" class="mt-1">
+                      <div v-if="doc.uploadedFor && doc.uploadedFor._id === user?.id" class="mt-1">
                         <span class="badge bg-info text-white" style="font-size: 0.65rem;">
                           <i class="bi bi-person-check-fill me-1"></i>Uploaded by Officer for You
                         </span>
@@ -487,6 +487,7 @@ export default {
     })
 
     return {
+      user,
       loading,
       documents,
       filteredDocuments,
