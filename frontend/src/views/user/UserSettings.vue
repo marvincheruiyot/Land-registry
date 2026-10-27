@@ -102,21 +102,21 @@
             <div class="mb-4">
               <label class="form-label fw-semibold text-dark">Text Size</label>
               <div class="d-flex align-items-center gap-3">
-                <button class="btn btn-light rounded-circle" @click="decreaseFontSize" :disabled="settings.fontSize <= 14">
+                <button class="btn btn-light rounded-circle" @click="decreaseFontSize" :disabled="settings.fontSize <= 12">
                   <i class="bi bi-dash-lg"></i>
                 </button>
                 <div class="flex-grow-1">
                   <input 
                     type="range" 
                     class="form-range" 
-                    min="14" 
-                    max="20" 
+                    min="12" 
+                    max="18" 
                     step="1" 
                     v-model="settings.fontSize" 
                     @change="saveSettings"
                   >
                 </div>
-                <button class="btn btn-light rounded-circle" @click="increaseFontSize" :disabled="settings.fontSize >= 20">
+                <button class="btn btn-light rounded-circle" @click="increaseFontSize" :disabled="settings.fontSize >= 18">
                   <i class="bi bi-plus-lg"></i>
                 </button>
                 <span class="badge bg-primary px-3 py-2" style="min-width: 55px;">{{ settings.fontSize }}px</span>
@@ -367,7 +367,7 @@ export default {
       dateFormat: 'DD/MM/YYYY',
       currency: 'KES',
       timezone: 'Africa/Nairobi',
-      fontSize: 16,
+      fontSize: 14,
       itemsPerPage: 20,
       animations: true,
       highContrast: false,
@@ -441,14 +441,14 @@ export default {
     };
 
     const increaseFontSize = () => {
-      if (settings.value.fontSize < 20) {
+      if (settings.value.fontSize < 18) {
         settings.value.fontSize++;
         saveSettings();
       }
     };
 
     const decreaseFontSize = () => {
-      if (settings.value.fontSize > 14) {
+      if (settings.value.fontSize > 12) {
         settings.value.fontSize--;
         saveSettings();
       }
@@ -461,7 +461,7 @@ export default {
           dateFormat: 'DD/MM/YYYY',
           currency: 'KES',
           timezone: 'Africa/Nairobi',
-          fontSize: 16,
+          fontSize: 14,
           itemsPerPage: 20,
           animations: true,
           highContrast: false,
