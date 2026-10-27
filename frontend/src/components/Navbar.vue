@@ -155,16 +155,6 @@
             Settings
           </div>
 
-          <router-link v-if="isLandOwner" to="/user-settings" class="sidebar-nav-item text-decoration-none" active-class="active">
-            <i class="bi bi-sliders"></i>
-            <span>My Settings</span>
-          </router-link>
-
-          <router-link to="/profile" class="sidebar-nav-item text-decoration-none" active-class="active">
-            <i class="bi bi-person-gear"></i>
-            <span>My Profile</span>
-          </router-link>
-
           <router-link v-if="isLandOwner" to="/notifications" class="sidebar-nav-item text-decoration-none" active-class="active">
             <i class="bi bi-bell-fill"></i>
             <span>Notifications</span>
@@ -173,6 +163,16 @@
           <router-link v-if="isLandOwner" to="/help" class="sidebar-nav-item text-decoration-none" active-class="active">
             <i class="bi bi-question-circle-fill"></i>
             <span>Help & Support</span>
+          </router-link>
+
+          <router-link v-if="isLandOwner" to="/user-settings" class="sidebar-nav-item text-decoration-none" active-class="active">
+            <i class="bi bi-sliders"></i>
+            <span>My Settings</span>
+          </router-link>
+
+          <router-link to="/profile" class="sidebar-nav-item text-decoration-none" active-class="active">
+            <i class="bi bi-person-gear"></i>
+            <span>My Profile</span>
           </router-link>
         </div>
       </div>
