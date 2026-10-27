@@ -3,6 +3,7 @@ const LandParcel = require('../models/LandParcel');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
 const AuditLog = require('../models/AuditLog');
+const Document = require('../models/Document');
 
 // Initiate Transfer
 exports.initiateTransfer = async (req, res, next) => {
@@ -208,6 +209,48 @@ exports.approveTransfer = async (req, res, next) => {
       await parcel.save();
     }
 
+    // **TITLE DEED TRANSFER**: Update all documents related to this parcel
+    // Find all title deed documents for this parcel that belong to the previous owner
+    const parcelDocuments = await Document.find({
+      'relatedEntity.entityType': 'LandParcel',
+      'relatedEntity.entityId': transfer.landParcel._id,
+      documentType: { $in: ['title_deed', 'deed', 'other'] }
+    });
+
+    // Mark documents as transferred (don't remove from previous owner, just mark as transferred)
+    let documentsTransferred = 0;
+    for (const doc of parcelDocuments) {
+      // Update the document to show it's been transferred
+      if (doc.uploadedBy.toString() === transfer.previousOwner._id.toString() || 
+          doc.uploadedFor?.toString() === transfer.previousOwner._id.toString()) {
+        
+        // Keep both previous and new owner references
+        doc.uploadedFor = transfer.newOwner._id; // New owner can access
+        doc.verificationStatus = 'transferred'; // Mark as transferred
+        doc.description = `Title deed transferred from ${transfer.previousOwner.fullName} (ID: ${transfer.previousOwner.nationalId}) to ${transfer.newOwner.fullName} (ID: ${transfer.newOwner.nationalId}) on ${new Date().toLocaleDateString('en-KE')}`;
+        
+        // Store transfer metadata
+        doc.metadata = {
+          ...doc.metadata,
+          transferredFrom: transfer.previousOwner._id,
+          transferredFromName: transfer.previousOwner.fullName,
+          transferredFromNationalId: transfer.previousOwner.nationalId,
+          transferredTo: transfer.newOwner._id,
+          transferredToName: transfer.newOwner.fullName,
+          transferredToNationalId: transfer.newOwner.nationalId,
+          transferredOn: new Date(),
+          transferId: transfer._id,
+          transferApprovedBy: req.user._id,
+          transferApprovedByName: req.user.fullName
+        };
+        
+        await doc.save();
+        documentsTransferred++;
+      }
+    }
+
+    console.log(`✅ Marked ${documentsTransferred} title deed document(s) as transferred to new owner`);
+
     // Create audit log for transfer approval
     await AuditLog.create({
       action: 'TRANSFER_APPROVED',
@@ -223,6 +266,7 @@ exports.approveTransfer = async (req, res, next) => {
         newOwner: transfer.newOwner.fullName,
         newOwnerNationalId: transfer.newOwner.nationalId,
         transferAmount: transfer.transferAmount,
+        documentsTransferred: documentsTransferred,
         approvedBy: req.user.fullName,
         approvedDate: new Date()
       },
@@ -234,7 +278,7 @@ exports.approveTransfer = async (req, res, next) => {
       recipient: transfer.previousOwner._id,
       type: 'TRANSFER_APPROVED',
       title: 'Transfer Approved',
-      message: `Your transfer request for parcel ${transfer.landParcel.parcelNumber} has been approved. The ownership has been transferred to ${transfer.newOwner.fullName}.`,
+      message: `Your transfer request for parcel ${transfer.landParcel.parcelNumber} has been approved. The ownership has been transferred to ${transfer.newOwner.fullName}. Title deed documents have been transferred to the new owner.`,
       relatedEntity: {
         entityType: 'Transfer',
         entityId: transfer._id
@@ -247,7 +291,7 @@ exports.approveTransfer = async (req, res, next) => {
       recipient: transfer.newOwner._id,
       type: 'TRANSFER_APPROVED',
       title: 'Land Parcel Received',
-      message: `Congratulations! You are now the registered owner of parcel ${transfer.landParcel.parcelNumber}. The transfer from ${transfer.previousOwner.fullName} has been completed.`,
+      message: `Congratulations! You are now the registered owner of parcel ${transfer.landParcel.parcelNumber}. The transfer from ${transfer.previousOwner.fullName} has been completed. ${documentsTransferred} title deed document(s) have been transferred to your account.`,
       relatedEntity: {
         entityType: 'LandParcel',
         entityId: transfer.landParcel._id
@@ -257,7 +301,7 @@ exports.approveTransfer = async (req, res, next) => {
 
     res.status(200).json({
       status: 'success',
-      message: 'Transfer approved and title successfully conveyed to new owner.'
+      message: `Transfer approved and title successfully conveyed to new owner. ${documentsTransferred} document(s) transferred.`
     });
   } catch (error) {
     next(error);

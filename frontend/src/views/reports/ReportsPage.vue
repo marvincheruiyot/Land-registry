@@ -103,19 +103,33 @@
             <div v-if="loadingStats" class="text-center py-3">
               <div class="spinner-border spinner-border-sm text-light" role="status"></div>
             </div>
-            <div v-else class="space-y-2">
-              <div class="d-flex justify-content-between py-2 border-bottom border-secondary border-opacity-25">
-                <span class="text-secondary small">New Registrations</span>
-                <span class="fw-bold text-white">{{ stats.todayRegistrations }}</span>
+            <div v-else>
+              <div class="space-y-2 mb-3">
+                <div class="d-flex justify-content-between py-2 border-bottom border-secondary border-opacity-25">
+                  <span class="text-secondary small">New Registrations</span>
+                  <span class="fw-bold text-white">{{ stats.todayRegistrations }}</span>
+                </div>
+                <div class="d-flex justify-content-between py-2 border-bottom border-secondary border-opacity-25">
+                  <span class="text-secondary small">Ownership Transfers</span>
+                  <span class="fw-bold text-warning">{{ stats.todayTransfers }}</span>
+                </div>
+                <div class="d-flex justify-content-between py-2">
+                  <span class="text-secondary small">Deed Verifications</span>
+                  <span class="fw-bold text-success">{{ stats.todayVerifications }}</span>
+                </div>
               </div>
-              <div class="d-flex justify-content-between py-2 border-bottom border-secondary border-opacity-25">
-                <span class="text-secondary small">Ownership Transfers</span>
-                <span class="fw-bold text-warning">{{ stats.todayTransfers }}</span>
-              </div>
-              <div class="d-flex justify-content-between py-2">
-                <span class="text-secondary small">Deed Verifications</span>
-                <span class="fw-bold text-success">{{ stats.todayVerifications }}</span>
-              </div>
+              <button 
+                @click="generateTodayActivity" 
+                :disabled="generatingToday"
+                class="btn btn-sm btn-light-pill w-100 d-flex justify-content-between align-items-center"
+              >
+                <span>
+                  <i class="bi bi-file-earmark-pdf me-1"></i>
+                  {{ generatingToday ? 'Generating...' : 'Generate Report' }}
+                </span>
+                <i v-if="!generatingToday" class="bi bi-download"></i>
+                <span v-else class="spinner-border spinner-border-sm" role="status"></span>
+              </button>
             </div>
           </div>
 
@@ -201,6 +215,7 @@ export default {
   components: { Navbar },
   setup() {
     const generating = ref(false)
+    const generatingToday = ref(false)
     const generateError = ref(null)
     const generateSuccess = ref(null)
     const loadingReports = ref(false)
@@ -245,6 +260,9 @@ export default {
         
         generateSuccess.value = 'Report generated and downloaded successfully!'
         
+        // Reload reports archive
+        await loadReports()
+        
         // Clear success message after 3 seconds
         setTimeout(() => {
           generateSuccess.value = null
@@ -257,6 +275,38 @@ export default {
         generateError.value = err.response?.data?.message || 'Failed to generate report'
       } finally {
         generating.value = false
+      }
+    }
+
+    const generateTodayActivity = async () => {
+      generatingToday.value = true
+      
+      try {
+        const response = await api.post('/reports/today-activity', {}, {
+          responseType: 'blob'
+        })
+        
+        // Download the PDF
+        const filename = `Todays_Activity_${new Date().toISOString().split('T')[0]}.pdf`;
+        const url = window.URL.createObjectURL(new Blob([response.data]))
+        const link = document.createElement('a')
+        link.href = url
+        link.setAttribute('download', filename)
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        window.URL.revokeObjectURL(url)
+        
+        // Reload reports archive to show the new report
+        await loadReports()
+        
+        // Show success notification
+        alert('Today\'s Activity report generated and saved to archive!')
+      } catch (err) {
+        console.error('Generate today activity error:', err)
+        alert('Failed to generate today\'s activity report. Please try again.')
+      } finally {
+        generatingToday.value = false
       }
     }
 
@@ -372,6 +422,7 @@ export default {
 
     return {
       generating,
+      generatingToday,
       generateError,
       generateSuccess,
       loadingReports,
@@ -381,6 +432,7 @@ export default {
       stats,
       reportForm,
       generateReport,
+      generateTodayActivity,
       downloadReport,
       downloadQuickReport,
       loadReports,

@@ -224,6 +224,16 @@
                 </div>
               </router-link>
 
+              <router-link to="/transfer-history" class="btn btn-light-pill text-start d-flex align-items-center gap-3 py-3 text-decoration-none">
+                <div class="avatar-circle bg-info text-white">
+                  <i class="bi bi-clock-history"></i>
+                </div>
+                <div>
+                  <div class="fw-bold text-dark">Transfer History</div>
+                  <small class="text-muted">View all transfers</small>
+                </div>
+              </router-link>
+
               <router-link to="/profile" class="btn btn-light-pill text-start d-flex align-items-center gap-3 py-3 text-decoration-none">
                 <div class="avatar-circle bg-success text-white">
                   <i class="bi bi-person-gear"></i>

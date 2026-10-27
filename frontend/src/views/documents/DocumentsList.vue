@@ -56,6 +56,17 @@
                 <h5 class="fw-bold text-dark text-truncate mb-1">{{ doc.documentName || doc.fileName }}</h5>
                 <div class="text-muted small mb-2 text-capitalize">{{ formatType(doc.documentType) }}</div>
                 
+                <!-- Parcel Information -->
+                <div v-if="doc.landParcel" class="mb-2 p-2 bg-white rounded-3 border">
+                  <div class="small">
+                    <i class="bi bi-geo-alt-fill text-success me-1"></i>
+                    <strong>Parcel:</strong> {{ doc.landParcel.parcelNumber }}
+                  </div>
+                  <div class="small text-muted">
+                    📍 {{ doc.landParcel.location?.county }}{{ doc.landParcel.location?.subCounty ? ', ' + doc.landParcel.location.subCounty : '' }}
+                  </div>
+                </div>
+                
                 <!-- Owner Information -->
                 <div class="mb-2">
                   <div v-if="doc.uploadedFor" class="small">
@@ -79,13 +90,26 @@
                 <div class="small text-muted mb-3">{{ formatDate(doc.createdAt) }}</div>
               </div>
 
-              <div class="pt-3 border-top d-flex gap-2">
-                <button @click="viewDocument(doc)" class="btn btn-pill btn-light-pill btn-sm flex-grow-1 justify-content-center">
-                  <i class="bi bi-eye"></i> View
-                </button>
-                <button @click="downloadDocument(doc)" class="btn btn-pill btn-dark-pill btn-sm flex-grow-1 justify-content-center">
-                  <i class="bi bi-download"></i> Download
-                </button>
+              <div class="pt-3 border-top">
+                <!-- View and Download Buttons -->
+                <div class="d-flex gap-2 mb-2">
+                  <button @click="viewDocument(doc)" class="btn btn-pill btn-light-pill btn-sm flex-grow-1 justify-content-center">
+                    <i class="bi bi-eye"></i> View
+                  </button>
+                  <button @click="downloadDocument(doc)" class="btn btn-pill btn-dark-pill btn-sm flex-grow-1 justify-content-center">
+                    <i class="bi bi-download"></i> Download
+                  </button>
+                </div>
+                
+                <!-- Approve/Reject Buttons (for Officers/Admins on pending documents) -->
+                <div v-if="(isOfficer || isAdmin) && doc.verificationStatus === 'pending'" class="d-flex gap-2">
+                  <button @click="approveDocument(doc)" class="btn btn-success btn-sm flex-grow-1">
+                    <i class="bi bi-check-circle-fill"></i> Approve
+                  </button>
+                  <button @click="showRejectModal(doc)" class="btn btn-danger btn-sm flex-grow-1">
+                    <i class="bi bi-x-circle-fill"></i> Reject
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -256,6 +280,60 @@
         </div>
       </div>
     </div>
+
+    <!-- Reject Document Modal -->
+    <div
+      v-if="showRejectDocumentModal"
+      class="modal fade show d-block"
+      style="background: rgba(0,0,0,0.5);"
+      tabindex="-1"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 p-3 p-md-4">
+          <div class="modal-header border-0 pb-0">
+            <h5 class="fw-bold text-dark mb-0">Reject Document</h5>
+            <button type="button" class="btn-close" @click="closeRejectModal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="alert alert-warning">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i>
+              You are about to reject this document. Please provide a reason.
+            </div>
+            
+            <div v-if="documentToReject" class="mb-3 p-3 bg-light rounded-3">
+              <div class="fw-bold">{{ documentToReject.documentName || documentToReject.fileName }}</div>
+              <div class="small text-muted">{{ formatType(documentToReject.documentType) }}</div>
+            </div>
+
+            <form @submit.prevent="rejectDocument">
+              <div class="mb-3">
+                <label class="form-label fw-semibold text-dark">Rejection Reason *</label>
+                <textarea
+                  v-model="rejectionReason"
+                  class="form-control rounded-4 bg-light border-0"
+                  rows="4"
+                  placeholder="Explain why this document is being rejected..."
+                  required
+                ></textarea>
+              </div>
+
+              <div v-if="rejectError" class="alert alert-danger mb-3">
+                {{ rejectError }}
+              </div>
+
+              <div class="d-flex gap-2">
+                <button type="submit" :disabled="rejecting" class="btn btn-danger flex-grow-1">
+                  {{ rejecting ? 'Rejecting...' : 'Reject Document' }}
+                </button>
+                <button type="button" @click="closeRejectModal" class="btn btn-secondary">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -289,6 +367,13 @@ export default {
     const fetchingOwner = ref(false)
     const ownerParcels = ref([])
     const loadingParcels = ref(false)
+
+    // Approve/Reject
+    const showRejectDocumentModal = ref(false)
+    const documentToReject = ref(null)
+    const rejectionReason = ref('')
+    const rejecting = ref(false)
+    const rejectError = ref(null)
 
     const uploadForm = ref({
       type: '',
@@ -524,6 +609,72 @@ export default {
       loadingParcels.value = false
     }
 
+    const approveDocument = async (doc) => {
+      if (!confirm(`Approve this document?\n\n${doc.documentName || doc.fileName}\n\nThis will mark it as verified.`)) {
+        return
+      }
+
+      try {
+        await api.put(`/documents/${doc._id}/verify`, { status: 'verified' })
+        
+        // Update local document status
+        const index = documents.value.findIndex(d => d._id === doc._id)
+        if (index !== -1) {
+          documents.value[index].verificationStatus = 'verified'
+        }
+        
+        alert('Document approved successfully!')
+      } catch (err) {
+        console.error('Error approving document:', err)
+        alert(err.response?.data?.message || 'Failed to approve document. Please try again.')
+      }
+    }
+
+    const showRejectModal = (doc) => {
+      documentToReject.value = doc
+      rejectionReason.value = ''
+      rejectError.value = null
+      showRejectDocumentModal.value = true
+    }
+
+    const closeRejectModal = () => {
+      showRejectDocumentModal.value = false
+      documentToReject.value = null
+      rejectionReason.value = ''
+      rejectError.value = null
+    }
+
+    const rejectDocument = async () => {
+      if (!rejectionReason.value.trim()) {
+        rejectError.value = 'Please provide a rejection reason'
+        return
+      }
+
+      rejecting.value = true
+      rejectError.value = null
+
+      try {
+        await api.put(`/documents/${documentToReject.value._id}/verify`, { 
+          status: 'rejected',
+          rejectionReason: rejectionReason.value 
+        })
+        
+        // Update local document status
+        const index = documents.value.findIndex(d => d._id === documentToReject.value._id)
+        if (index !== -1) {
+          documents.value[index].verificationStatus = 'rejected'
+        }
+        
+        closeRejectModal()
+        alert('Document rejected successfully!')
+      } catch (err) {
+        console.error('Error rejecting document:', err)
+        rejectError.value = err.response?.data?.message || 'Failed to reject document. Please try again.'
+      } finally {
+        rejecting.value = false
+      }
+    }
+
     onMounted(() => {
       loadDocuments()
     })
@@ -547,6 +698,11 @@ export default {
       ownerParcels,
       loadingParcels,
       ownerUploadForm,
+      showRejectDocumentModal,
+      documentToReject,
+      rejectionReason,
+      rejecting,
+      rejectError,
       getDocumentIcon,
       formatType,
       formatDate,
@@ -558,7 +714,11 @@ export default {
       fetchOwnerDetails,
       handleOwnerFileSelect,
       uploadForOwner,
-      closeOwnerModal
+      closeOwnerModal,
+      approveDocument,
+      showRejectModal,
+      closeRejectModal,
+      rejectDocument
     }
   }
 }

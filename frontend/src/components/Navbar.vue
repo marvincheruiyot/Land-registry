@@ -55,6 +55,11 @@
               <i class="bi bi-patch-check-fill"></i>
               <span>Verify Document</span>
             </router-link>
+
+            <router-link to="/transfer-history" class="sidebar-nav-item text-decoration-none" active-class="active">
+              <i class="bi bi-clock-history"></i>
+              <span>Transfer History</span>
+            </router-link>
           </template>
 
           <!-- Officer & Admin Menu -->
@@ -149,6 +154,11 @@
           <div class="text-uppercase text-muted fw-bold px-3 mb-2" style="font-size: 0.68rem; letter-spacing: 1px;">
             Settings
           </div>
+
+          <router-link v-if="isLandOwner" to="/user-settings" class="sidebar-nav-item text-decoration-none" active-class="active">
+            <i class="bi bi-sliders"></i>
+            <span>My Settings</span>
+          </router-link>
 
           <router-link to="/profile" class="sidebar-nav-item text-decoration-none" active-class="active">
             <i class="bi bi-person-gear"></i>

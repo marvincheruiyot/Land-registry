@@ -60,8 +60,11 @@ const documentSchema = new mongoose.Schema({
   verificationToken: String,
   verificationStatus: {
     type: String,
-    enum: ['pending', 'verified', 'rejected'],
+    enum: ['pending', 'verified', 'rejected', 'transferred'],
     default: 'pending'
+  },
+  rejectionReason: {
+    type: String
   },
   version: {
     type: Number,
@@ -93,7 +96,11 @@ const documentSchema = new mongoose.Schema({
     default: false
   },
   description: String,
-  tags: [String]
+  tags: [String],
+  metadata: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+  }
 }, {
   timestamps: true
 });

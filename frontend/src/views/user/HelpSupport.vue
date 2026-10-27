@@ -22,150 +22,224 @@
             <div class="accordion" id="faqAccordion">
               <!-- FAQ 1 -->
               <div class="accordion-item border-0 mb-2 rounded-3 overflow-hidden">
-                <h2 class="accordion-header">
-                  <button class="accordion-button bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq1" aria-expanded="true">
+                <h2 class="accordion-header" id="heading1">
+                  <button class="accordion-button bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq1" aria-expanded="true" aria-controls="faq1">
                     <i class="bi bi-question-circle me-2 text-primary"></i>
                     How do I view my land parcels?
                   </button>
                 </h2>
-                <div id="faq1" class="accordion-collapse collapse show" aria-labelledby="faq1">
-                  <div class="accordion-body">
-                    Navigate to <strong>"My Land Parcels"</strong> from the sidebar menu. You'll see all parcels registered under your National ID. Click on any parcel to view detailed information including location, size, and title deed number.
+                <div id="faq1" class="accordion-collapse collapse show" aria-labelledby="heading1" data-bs-parent="#faqAccordion">
+                  <div class="accordion-body bg-white">
+                    <p class="mb-2"><strong>Step-by-step instructions:</strong></p>
+                    <ol class="mb-0">
+                      <li>Click on <strong>"My Land Parcels"</strong> from the sidebar menu</li>
+                      <li>You'll see a list of all parcels registered under your National ID</li>
+                      <li>Click on any parcel card to view detailed information</li>
+                      <li>Details include: Location, Size, Title Deed Number, Ownership History</li>
+                    </ol>
                   </div>
                 </div>
               </div>
 
               <!-- FAQ 2 -->
               <div class="accordion-item border-0 mb-2 rounded-3 overflow-hidden">
-                <h2 class="accordion-header">
-                  <button class="accordion-button bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq2" aria-expanded="true">
+                <h2 class="accordion-header" id="heading2">
+                  <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq2" aria-expanded="false" aria-controls="faq2">
                     <i class="bi bi-question-circle me-2 text-primary"></i>
                     How do I transfer land ownership?
                   </button>
                 </h2>
-                <div id="faq2" class="accordion-collapse collapse show" aria-labelledby="faq2">
-                  <div class="accordion-body">
-                    <ol class="mb-0">
-                      <li>Go to your Dashboard and click <strong>"Transfer Land"</strong></li>
-                      <li>Select the parcel you want to transfer</li>
-                      <li>Enter the new owner's National ID number</li>
-                      <li>Select transfer type (Sale, Gift, Inheritance, etc.)</li>
-                      <li>Submit the request for approval</li>
+                <div id="faq2" class="accordion-collapse collapse" aria-labelledby="heading2" data-bs-parent="#faqAccordion">
+                  <div class="accordion-body bg-white">
+                    <p class="mb-2"><strong>Follow these steps:</strong></p>
+                    <ol class="mb-3">
+                      <li>Go to your Dashboard</li>
+                      <li>Click <strong>"Transfer Land"</strong> or <strong>"Initiate Transfer"</strong> button</li>
+                      <li>Select the parcel you want to transfer from the dropdown</li>
+                      <li>Enter the new owner's <strong>National ID number</strong></li>
+                      <li>Select transfer type: Sale, Gift, Inheritance, or Court Order</li>
+                      <li>If it's a sale, enter the transfer amount</li>
+                      <li>Add any additional notes</li>
+                      <li>Click <strong>"Submit Transfer Application"</strong></li>
                     </ol>
-                    <p class="mt-2 mb-0">The transfer will be reviewed by a Land Officer and you'll receive a notification once processed.</p>
+                    <div class="alert alert-info small mb-0">
+                      <i class="bi bi-info-circle me-1"></i>
+                      The transfer will be reviewed by a Land Officer. You'll receive a notification once it's processed. Check "My Transfers" to track the status.
+                    </div>
                   </div>
                 </div>
               </div>
 
               <!-- FAQ 3 -->
               <div class="accordion-item border-0 mb-2 rounded-3 overflow-hidden">
-                <h2 class="accordion-header">
-                  <button class="accordion-button bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq3" aria-expanded="true">
+                <h2 class="accordion-header" id="heading3">
+                  <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq3" aria-expanded="false" aria-controls="faq3">
                     <i class="bi bi-question-circle me-2 text-primary"></i>
                     How do I verify a land document?
                   </button>
                 </h2>
-                <div id="faq3" class="accordion-collapse collapse show" aria-labelledby="faq3">
-                  <div class="accordion-body">
-                    Click on <strong>"Verify Document"</strong> in the sidebar menu. Enter the parcel number or title deed number and click "Verify". The system will display the current ownership status and document authenticity.
+                <div id="faq3" class="accordion-collapse collapse" aria-labelledby="heading3" data-bs-parent="#faqAccordion">
+                  <div class="accordion-body bg-white">
+                    <p class="mb-2"><strong>Verification steps:</strong></p>
+                    <ol class="mb-3">
+                      <li>Click on <strong>"Verify Document"</strong> in the sidebar menu</li>
+                      <li>Enter the <strong>Parcel Number</strong> or <strong>Title Deed Number</strong></li>
+                      <li>Click <strong>"Verify"</strong> button</li>
+                      <li>The system will display:
+                        <ul>
+                          <li>Current ownership status</li>
+                          <li>Document authenticity</li>
+                          <li>Parcel location</li>
+                          <li>Any pending transfers</li>
+                        </ul>
+                      </li>
+                    </ol>
+                    <div class="alert alert-success small mb-0">
+                      <i class="bi bi-shield-check me-1"></i>
+                      All verifications are logged for security purposes.
+                    </div>
                   </div>
                 </div>
               </div>
 
               <!-- FAQ 4 -->
               <div class="accordion-item border-0 mb-2 rounded-3 overflow-hidden">
-                <h2 class="accordion-header">
-                  <button class="accordion-button bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq4" aria-expanded="true">
+                <h2 class="accordion-header" id="heading4">
+                  <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq4" aria-expanded="false" aria-controls="faq4">
                     <i class="bi bi-question-circle me-2 text-primary"></i>
                     What if I don't see my land parcel?
                   </button>
                 </h2>
-                <div id="faq4" class="accordion-collapse collapse show" aria-labelledby="faq4">
-                  <div class="accordion-body">
-                    If you own land but don't see it in your account, it may need to be registered in the system. Contact your local Land Office or submit a support ticket. Ensure your National ID matches the one on your title deed.
+                <div id="faq4" class="accordion-collapse collapse" aria-labelledby="heading4" data-bs-parent="#faqAccordion">
+                  <div class="accordion-body bg-white">
+                    <p class="mb-2"><strong>Troubleshooting steps:</strong></p>
+                    <ol class="mb-3">
+                      <li>Check that your <strong>National ID</strong> in your profile matches the one on your title deed</li>
+                      <li>Refresh the page and try again</li>
+                      <li>Check if the land needs to be registered in the digital system</li>
+                      <li>Contact your local Land Office with your title deed</li>
+                      <li>Or submit a support request using the button below</li>
+                    </ol>
+                    <div class="alert alert-warning small mb-0">
+                      <i class="bi bi-exclamation-triangle me-1"></i>
+                      If your land was registered before the digital system, it may need to be added by a Land Officer.
+                    </div>
                   </div>
                 </div>
               </div>
 
               <!-- FAQ 5 -->
               <div class="accordion-item border-0 mb-2 rounded-3 overflow-hidden">
-                <h2 class="accordion-header">
-                  <button class="accordion-button bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq5" aria-expanded="true">
+                <h2 class="accordion-header" id="heading5">
+                  <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq5" aria-expanded="false" aria-controls="faq5">
                     <i class="bi bi-question-circle me-2 text-primary"></i>
                     How long does a land transfer take?
                   </button>
                 </h2>
-                <div id="faq5" class="accordion-collapse collapse show" aria-labelledby="faq5">
-                  <div class="accordion-body">
-                    Transfer processing time varies:
-                    <ul class="mb-0">
-                      <li><strong>Simple transfers:</strong> 5-7 business days</li>
-                      <li><strong>Inheritance cases:</strong> 14-21 business days</li>
+                <div id="faq5" class="accordion-collapse collapse" aria-labelledby="heading5" data-bs-parent="#faqAccordion">
+                  <div class="accordion-body bg-white">
+                    <p class="mb-2"><strong>Expected processing times:</strong></p>
+                    <ul class="mb-3">
+                      <li><strong>Simple transfers (Sale/Gift):</strong> 5-7 business days</li>
+                      <li><strong>Inheritance cases:</strong> 14-21 business days (requires additional documentation)</li>
+                      <li><strong>Court order transfers:</strong> 7-14 business days</li>
                       <li><strong>Complex cases:</strong> Up to 30 business days</li>
                     </ul>
-                    <p class="mt-2 mb-0">You can track your transfer status in <strong>"My Transfers"</strong> section.</p>
+                    <p class="mb-2"><strong>Track your transfer:</strong></p>
+                    <ol class="mb-0">
+                      <li>Go to <strong>"My Transfers"</strong> section</li>
+                      <li>View status: Pending, Approved, or Rejected</li>
+                      <li>You'll receive email/SMS notifications at each stage</li>
+                    </ol>
                   </div>
                 </div>
               </div>
 
               <!-- FAQ 6 -->
               <div class="accordion-item border-0 mb-2 rounded-3 overflow-hidden">
-                <h2 class="accordion-header">
-                  <button class="accordion-button bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq6" aria-expanded="true">
+                <h2 class="accordion-header" id="heading6">
+                  <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq6" aria-expanded="false" aria-controls="faq6">
                     <i class="bi bi-question-circle me-2 text-primary"></i>
                     How do I update my profile information?
                   </button>
                 </h2>
-                <div id="faq6" class="accordion-collapse collapse show" aria-labelledby="faq6">
-                  <div class="accordion-body">
-                    Go to <strong>"My Profile"</strong> from the sidebar, update your information (name, email, phone, address), and click <strong>"Save Changes"</strong>. Note: You cannot change your National ID number as it's linked to your land records.
+                <div id="faq6" class="accordion-collapse collapse" aria-labelledby="heading6" data-bs-parent="#faqAccordion">
+                  <div class="accordion-body bg-white">
+                    <p class="mb-2"><strong>Update your information:</strong></p>
+                    <ol class="mb-3">
+                      <li>Click on <strong>"My Profile"</strong> from the sidebar</li>
+                      <li>Update your information:
+                        <ul>
+                          <li>Full Name</li>
+                          <li>Email Address</li>
+                          <li>Phone Number</li>
+                          <li>Physical Address</li>
+                        </ul>
+                      </li>
+                      <li>Click <strong>"Save Changes"</strong></li>
+                    </ol>
+                    <div class="alert alert-warning small mb-0">
+                      <i class="bi bi-lock me-1"></i>
+                      <strong>Note:</strong> You cannot change your National ID number as it's permanently linked to your land records for security.
+                    </div>
                   </div>
                 </div>
               </div>
 
               <!-- FAQ 7 -->
               <div class="accordion-item border-0 mb-2 rounded-3 overflow-hidden">
-                <h2 class="accordion-header">
-                  <button class="accordion-button bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq7" aria-expanded="true">
+                <h2 class="accordion-header" id="heading7">
+                  <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq7" aria-expanded="false" aria-controls="faq7">
                     <i class="bi bi-question-circle me-2 text-primary"></i>
                     What documents do I need for land transfer?
                   </button>
                 </h2>
-                <div id="faq7" class="accordion-collapse collapse show" aria-labelledby="faq7">
-                  <div class="accordion-body">
-                    Required documents:
-                    <ul class="mb-0">
-                      <li>Original Title Deed</li>
-                      <li>National ID (both parties)</li>
-                      <li>Sale Agreement (if applicable)</li>
-                      <li>Tax Clearance Certificate</li>
-                      <li>Consent from spouse (if married)</li>
-                      <li>Land Rates Clearance Certificate</li>
-                    </ul>
-                    <p class="mt-2 mb-0">Upload digital copies through the system during transfer application.</p>
+                <div id="faq7" class="accordion-collapse collapse" aria-labelledby="heading7" data-bs-parent="#faqAccordion">
+                  <div class="accordion-body bg-white">
+                    <p class="mb-2"><strong>Required documents checklist:</strong></p>
+                    <ol class="mb-3">
+                      <li><strong>Original Title Deed</strong> - Upload digital copy</li>
+                      <li><strong>National ID</strong> (both seller and buyer)</li>
+                      <li><strong>Sale Agreement</strong> (if selling) - Signed by both parties</li>
+                      <li><strong>Tax Clearance Certificate</strong> from KRA</li>
+                      <li><strong>Consent from Spouse</strong> (if married)</li>
+                      <li><strong>Land Rates Clearance</strong> from County Government</li>
+                      <li><strong>Search Certificate</strong> (optional but recommended)</li>
+                    </ol>
+                    <p class="mb-2"><strong>How to upload:</strong></p>
+                    <ol class="mb-0">
+                      <li>Go to <strong>"My Documents"</strong></li>
+                      <li>Click <strong>"Upload Document"</strong></li>
+                      <li>Select document type and upload file</li>
+                      <li>Documents will be reviewed by Land Officers</li>
+                    </ol>
                   </div>
                 </div>
               </div>
 
               <!-- FAQ 8 -->
               <div class="accordion-item border-0 mb-2 rounded-3 overflow-hidden">
-                <h2 class="accordion-header">
-                  <button class="accordion-button bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq8" aria-expanded="true">
+                <h2 class="accordion-header" id="heading8">
+                  <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq8" aria-expanded="false" aria-controls="faq8">
                     <i class="bi bi-question-circle me-2 text-primary"></i>
                     How secure is my data?
                   </button>
                 </h2>
-                <div id="faq8" class="accordion-collapse collapse show" aria-labelledby="faq8">
-                  <div class="accordion-body">
-                    Your data is protected with:
-                    <ul class="mb-0">
-                      <li>256-bit TLS encryption</li>
-                      <li>Secure authentication</li>
-                      <li>Regular security audits</li>
-                      <li>Government-grade data centers</li>
-                      <li>Audit logging of all activities</li>
+                <div id="faq8" class="accordion-collapse collapse" aria-labelledby="heading8" data-bs-parent="#faqAccordion">
+                  <div class="accordion-body bg-white">
+                    <p class="mb-2"><strong>Security measures in place:</strong></p>
+                    <ul class="mb-3">
+                      <li><strong>256-bit TLS Encryption</strong> - All data transmitted is encrypted</li>
+                      <li><strong>Secure Authentication</strong> - Password protected with hashing</li>
+                      <li><strong>Regular Security Audits</strong> - System monitored 24/7</li>
+                      <li><strong>Government-grade Data Centers</strong> - Located in Kenya</li>
+                      <li><strong>Audit Logging</strong> - All activities are tracked</li>
+                      <li><strong>Role-based Access</strong> - Users only see their own data</li>
                     </ul>
-                    <p class="mt-2 mb-0">We comply with Kenya Data Protection Act 2019.</p>
+                    <div class="alert alert-success small mb-0">
+                      <i class="bi bi-shield-check me-1"></i>
+                      We comply with <strong>Kenya Data Protection Act 2019</strong> and international security standards.
+                    </div>
                   </div>
                 </div>
               </div>

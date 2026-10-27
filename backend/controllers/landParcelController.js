@@ -306,6 +306,41 @@ exports.updateParcel = async (req, res, next) => {
       }
     });
 
+    // Notify the owner if important fields changed (status, size, boundaries)
+    if (parcel.currentOwner) {
+      const importantFieldsChanged = 
+        oldParcel.status !== parcel.status ||
+        oldParcel.sizeInAcres !== parcel.sizeInAcres ||
+        JSON.stringify(oldParcel.boundaries) !== JSON.stringify(parcel.boundaries);
+
+      if (importantFieldsChanged) {
+        const Notification = require('../models/Notification');
+        
+        let changeMessage = '';
+        if (oldParcel.status !== parcel.status) {
+          changeMessage += `Status changed from ${oldParcel.status} to ${parcel.status}. `;
+        }
+        if (oldParcel.sizeInAcres !== parcel.sizeInAcres) {
+          changeMessage += `Size updated from ${oldParcel.sizeInAcres} to ${parcel.sizeInAcres} acres. `;
+        }
+        if (JSON.stringify(oldParcel.boundaries) !== JSON.stringify(parcel.boundaries)) {
+          changeMessage += `Boundaries have been updated. `;
+        }
+
+        await Notification.create({
+          recipient: parcel.currentOwner._id,
+          type: 'SYSTEM_ALERT',
+          title: 'Land Parcel Updated',
+          message: `Your land parcel ${parcel.parcelNumber} has been updated by ${req.user.fullName}. ${changeMessage}`,
+          relatedEntity: {
+            entityType: 'LandParcel',
+            entityId: parcel._id
+          },
+          priority: 'high'
+        });
+      }
+    }
+
     res.status(200).json({
       status: 'success',
       data: { parcel }
@@ -389,6 +424,40 @@ exports.flagParcel = async (req, res, next) => {
         ownerName: parcel.currentOwner?.fullName
       }
     });
+
+    // Notify the parcel owner that their land has been flagged
+    if (parcel.currentOwner) {
+      const Notification = require('../models/Notification');
+      await Notification.create({
+        recipient: parcel.currentOwner._id,
+        type: 'PARCEL_FLAGGED',
+        title: 'Land Parcel Flagged ⚠️',
+        message: `Your land parcel ${parcel.parcelNumber} has been flagged by ${req.user.fullName}. Reason: ${flagReason}. Please contact the land registry office immediately to resolve this issue.`,
+        relatedEntity: {
+          entityType: 'LandParcel',
+          entityId: parcel._id
+        },
+        priority: 'critical'
+      });
+    }
+
+    // Notify all administrators about the flagging
+    const admins = await User.find({ role: 'Administrator', isActive: true });
+    const Notification = require('../models/Notification');
+    const adminNotifications = admins.map(admin =>
+      Notification.create({
+        recipient: admin._id,
+        type: 'PARCEL_FLAGGED',
+        title: 'Parcel Flagged',
+        message: `${req.user.fullName} flagged parcel ${parcel.parcelNumber} (Owner: ${parcel.currentOwner?.fullName}). Reason: ${flagReason}`,
+        relatedEntity: {
+          entityType: 'LandParcel',
+          entityId: parcel._id
+        },
+        priority: 'high'
+      })
+    );
+    await Promise.all(adminNotifications);
 
     res.status(200).json({
       status: 'success',

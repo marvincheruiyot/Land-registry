@@ -69,6 +69,18 @@ const routes = [
     meta: { requiresAuth: true, roles: ['Land_Owner'] }
   },
   {
+    path: '/transfer-history',
+    name: 'TransferHistory',
+    component: () => import('@/views/user/TransferHistory.vue'),
+    meta: { requiresAuth: true, roles: ['Land_Owner'] }
+  },
+  {
+    path: '/user-settings',
+    name: 'UserSettings',
+    component: () => import('@/views/user/UserSettings.vue'),
+    meta: { requiresAuth: true, roles: ['Land_Owner'] }
+  },
+  {
     path: '/my-documents',
     name: 'MyDocuments',
     component: () => import('@/views/user/MyDocuments.vue'),

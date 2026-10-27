@@ -131,9 +131,18 @@
                   <small class="text-muted">{{ formatFileSize(doc.fileSize) }}</small>
                 </td>
                 <td class="py-3">
-                  <span :class="['badge rounded-pill px-3 py-1', getStatusClass(doc.verificationStatus)]">
-                    {{ doc.verificationStatus || 'Pending' }}
-                  </span>
+                  <div class="d-flex flex-column gap-1">
+                    <span :class="['badge rounded-pill px-3 py-1', getStatusClass(doc.verificationStatus)]">
+                      {{ doc.verificationStatus || 'Pending' }}
+                    </span>
+                    <!-- Transferred Badge -->
+                    <span v-if="doc.verificationStatus === 'transferred' && doc.metadata?.transferredTo" class="badge bg-warning text-dark px-2 py-1 small">
+                      <i class="bi bi-arrow-right-circle me-1"></i>TRANSFERRED
+                    </span>
+                    <span v-if="doc.verificationStatus === 'transferred' && doc.metadata?.transferredFrom" class="badge bg-success text-white px-2 py-1 small">
+                      <i class="bi bi-arrow-left-circle me-1"></i>RECEIVED
+                    </span>
+                  </div>
                 </td>
                 <td class="py-3 text-end">
                   <button @click="downloadDocument(doc)" class="btn btn-sm btn-light border me-1" title="Download">
@@ -364,7 +373,8 @@ export default {
       const classes = {
         'verified': 'bg-success text-white',
         'pending': 'bg-warning text-dark',
-        'rejected': 'bg-danger text-white'
+        'rejected': 'bg-danger text-white',
+        'transferred': 'bg-info text-white'
       }
       return classes[status?.toLowerCase()] || 'bg-secondary text-white'
     }
