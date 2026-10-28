@@ -355,15 +355,17 @@
 <script>
 import { ref, onMounted } from 'vue';
 import Navbar from '@/components/Navbar.vue';
+import { useTranslation } from '@/composables/useTranslation';
 
 export default {
   name: 'UserSettings',
   components: { Navbar },
   setup() {
+    const { setLanguage, getCurrentLanguage } = useTranslation();
     const showSuccess = ref(false);
     
     const settings = ref({
-      language: 'en',
+      language: getCurrentLanguage.value || 'en',
       dateFormat: 'DD/MM/YYYY',
       currency: 'KES',
       timezone: 'Africa/Nairobi',
@@ -392,6 +394,11 @@ export default {
       if (saved) {
         settings.value = { ...settings.value, ...JSON.parse(saved) };
       }
+      // Also load language from localStorage
+      const savedLang = localStorage.getItem('selectedLanguage');
+      if (savedLang) {
+        settings.value.language = savedLang;
+      }
     };
 
     const saveSettings = () => {
@@ -406,19 +413,9 @@ export default {
     };
 
     const changeLanguage = () => {
-      // Store language preference
-      localStorage.setItem('selectedLanguage', settings.value.language);
-      saveSettings();
-      
-      // Show language change message
-      const languageNames = {
-        'en': 'English',
-        'sw': 'Kiswahili',
-        'fr': 'French',
-        'ar': 'Arabic'
-      };
-      
-      alert(`Language changed to ${languageNames[settings.value.language]}. Some labels will update immediately, full translation coming soon!`);
+      // Use the translation system to change language
+      setLanguage(settings.value.language);
+      // Settings are saved automatically, page will reload
     };
 
     const applySettings = () => {
@@ -480,8 +477,8 @@ export default {
             shareData: true
           }
         };
-        saveSettings();
-        alert('Settings have been reset to default values.');
+        // Reset language
+        setLanguage('en');
       }
     };
 

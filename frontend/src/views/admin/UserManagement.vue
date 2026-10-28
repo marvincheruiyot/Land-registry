@@ -75,9 +75,82 @@
                     </td>
                     <td class="fw-semibold text-dark py-3">{{ u.nationalId }}</td>
                     <td class="py-3">
-                      <span class="badge bg-light text-dark rounded-pill px-3 py-2">
-                        {{ (u.role || '').replace('_', ' ') }}
-                      </span>
+                      <!-- Role Dropdown -->
+                      <div class="dropdown role-dropdown">
+                        <button 
+                          :class="['btn btn-sm dropdown-toggle role-dropdown-btn', getRoleBadgeClass(u.role)]"
+                          type="button" 
+                          :id="'roleDropdown' + u.id" 
+                          data-bs-toggle="dropdown"
+                          aria-expanded="false"
+                        >
+                          <i :class="[getRoleIcon(u.role), 'me-2']"></i>
+                          <span>{{ formatRole(u.role) }}</span>
+                        </button>
+                        <ul class="dropdown-menu role-dropdown-menu shadow-lg border-0" :aria-labelledby="'roleDropdown' + u.id">
+                          <li class="dropdown-header text-muted small fw-semibold">
+                            <i class="bi bi-arrow-repeat me-1"></i> CHANGE ROLE TO
+                          </li>
+                          <li><hr class="dropdown-divider my-1"></li>
+                          <li>
+                            <a 
+                              class="dropdown-item role-dropdown-item" 
+                              :class="{ 'active': u.role === 'Land_Owner', 'disabled': u.role === 'Land_Owner' }"
+                              @click="u.role !== 'Land_Owner' && changeUserRole(u.id, 'Land_Owner', u.name)"
+                              href="javascript:void(0)"
+                            >
+                              <div class="d-flex align-items-center">
+                                <div class="role-icon-circle bg-secondary-subtle text-secondary me-3">
+                                  <i class="bi bi-person-circle"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                  <div class="fw-semibold">Land Owner</div>
+                                  <small class="text-muted">Owns and manages land parcels</small>
+                                </div>
+                                <i v-if="u.role === 'Land_Owner'" class="bi bi-check-circle-fill text-success ms-2"></i>
+                              </div>
+                            </a>
+                          </li>
+                          <li>
+                            <a 
+                              class="dropdown-item role-dropdown-item" 
+                              :class="{ 'active': u.role === 'Land_Officer', 'disabled': u.role === 'Land_Officer' }"
+                              @click="u.role !== 'Land_Officer' && changeUserRole(u.id, 'Land_Officer', u.name)"
+                              href="javascript:void(0)"
+                            >
+                              <div class="d-flex align-items-center">
+                                <div class="role-icon-circle bg-primary-subtle text-primary me-3">
+                                  <i class="bi bi-person-badge"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                  <div class="fw-semibold">Land Officer</div>
+                                  <small class="text-muted">Manages land records & transfers</small>
+                                </div>
+                                <i v-if="u.role === 'Land_Officer'" class="bi bi-check-circle-fill text-success ms-2"></i>
+                              </div>
+                            </a>
+                          </li>
+                          <li>
+                            <a 
+                              class="dropdown-item role-dropdown-item" 
+                              :class="{ 'active': u.role === 'ADMINISTRATOR' || u.role === 'Administrator', 'disabled': u.role === 'ADMINISTRATOR' || u.role === 'Administrator' }"
+                              @click="(u.role !== 'ADMINISTRATOR' && u.role !== 'Administrator') && changeUserRole(u.id, 'ADMINISTRATOR', u.name)"
+                              href="javascript:void(0)"
+                            >
+                              <div class="d-flex align-items-center">
+                                <div class="role-icon-circle bg-danger-subtle text-danger me-3">
+                                  <i class="bi bi-shield-fill-check"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                  <div class="fw-semibold">Administrator</div>
+                                  <small class="text-muted">Full system access & control</small>
+                                </div>
+                                <i v-if="u.role === 'ADMINISTRATOR' || u.role === 'Administrator'" class="bi bi-check-circle-fill text-success ms-2"></i>
+                              </div>
+                            </a>
+                          </li>
+                        </ul>
+                      </div>
                     </td>
                     <td class="py-3">
                       <span :class="['badge badge-pill-custom', u.isActive !== false ? 'badge-soft-green' : 'badge-soft-red']">
@@ -189,6 +262,58 @@
         </div>
       </div>
     </div>
+
+    <!-- Role Change Confirmation Modal -->
+    <div v-if="showRoleChangeModal" class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+      <div class="modal-dialog">
+        <div class="modal-content border-0 shadow-lg">
+          <div class="modal-header bg-warning-subtle border-0">
+            <h5 class="modal-title fw-bold">
+              <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>
+              Change User Role
+            </h5>
+            <button @click="showRoleChangeModal = false" type="button" class="btn-close"></button>
+          </div>
+          <div class="modal-body py-4">
+            <p class="mb-3">Are you sure you want to change <strong>{{ roleChangeTarget.userName }}</strong>'s role?</p>
+            
+            <div class="d-flex align-items-center justify-content-center gap-3 my-4 p-3 bg-light rounded-3">
+              <div class="text-center">
+                <div class="badge bg-secondary rounded-pill px-3 py-2 mb-2">
+                  <i :class="getRoleIcon(roleChangeTarget.currentRole)" class="me-1"></i>
+                  {{ formatRole(roleChangeTarget.currentRole) }}
+                </div>
+                <small class="text-muted d-block">Current Role</small>
+              </div>
+              
+              <i class="bi bi-arrow-right fs-3 text-muted"></i>
+              
+              <div class="text-center">
+                <div class="badge bg-primary rounded-pill px-3 py-2 mb-2">
+                  <i :class="getRoleIcon(roleChangeTarget.newRole)" class="me-1"></i>
+                  {{ formatRole(roleChangeTarget.newRole) }}
+                </div>
+                <small class="text-muted d-block">New Role</small>
+              </div>
+            </div>
+
+            <div class="alert alert-info mb-0">
+              <small>
+                <i class="bi bi-info-circle me-1"></i>
+                <strong>Note:</strong> This will change their access permissions immediately and send them a notification.
+              </small>
+            </div>
+          </div>
+          <div class="modal-footer border-0">
+            <button @click="showRoleChangeModal = false" class="btn btn-light">Cancel</button>
+            <button @click="confirmRoleChange" class="btn btn-primary">
+              <i class="bi bi-check-circle me-1"></i>
+              Confirm Change
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -209,6 +334,13 @@ export default {
     const userRoleFilter = ref('all')
     const userStatusFilter = ref('all')
     const showNewUserModal = ref(false)
+    const showRoleChangeModal = ref(false)
+    const roleChangeTarget = ref({
+      userId: null,
+      userName: '',
+      currentRole: '',
+      newRole: ''
+    })
     
     const newUserForm = ref({
       fullName: '',
@@ -329,6 +461,87 @@ export default {
       loadUsers()
     }
 
+    const changeUserRole = async (userId, newRole, userName) => {
+      // Find current user to get their role
+      const user = usersList.value.find(u => u.id === userId)
+      if (!user) return
+      
+      // Don't show modal if trying to set the same role
+      if (user.role === newRole) {
+        return
+      }
+      
+      // Set modal data and show modal
+      roleChangeTarget.value = {
+        userId,
+        userName,
+        currentRole: user.role,
+        newRole
+      }
+      showRoleChangeModal.value = true
+    }
+
+    const confirmRoleChange = async () => {
+      const { userId, newRole } = roleChangeTarget.value
+      
+      try {
+        const response = await api.put(`/admin/users/${userId}/role`, { newRole })
+        
+        if (response.data.status === 'success') {
+          // Update user in local list
+          const user = usersList.value.find(u => u.id === userId)
+          if (user) {
+            user.role = newRole
+          }
+          
+          // Close modal
+          showRoleChangeModal.value = false
+          
+          // Show success message
+          alert(`✅ Success! User role changed to ${formatRole(newRole)}`)
+          
+          // Reload users to ensure consistency
+          await loadUsers()
+        }
+      } catch (error) {
+        console.error('Error changing role:', error)
+        const errorMsg = error.response?.data?.message || 'Failed to change user role'
+        alert(`❌ Error: ${errorMsg}`)
+        showRoleChangeModal.value = false
+      }
+    }
+
+    const formatRole = (role) => {
+      if (!role) return 'Unknown'
+      const roles = {
+        'Land_Owner': 'Land Owner',
+        'Land_Officer': 'Land Officer',
+        'ADMINISTRATOR': 'Administrator',
+        'Administrator': 'Administrator'
+      }
+      return roles[role] || role.replace('_', ' ')
+    }
+
+    const getRoleIcon = (role) => {
+      const icons = {
+        'Land_Owner': 'bi bi-person-circle',
+        'Land_Officer': 'bi bi-person-badge',
+        'ADMINISTRATOR': 'bi bi-shield-fill-check',
+        'Administrator': 'bi bi-shield-fill-check'
+      }
+      return icons[role] || 'bi bi-person'
+    }
+
+    const getRoleBadgeClass = (role) => {
+      const classes = {
+        'Land_Owner': 'role-badge-owner',
+        'Land_Officer': 'role-badge-officer',
+        'ADMINISTRATOR': 'role-badge-admin',
+        'Administrator': 'role-badge-admin'
+      }
+      return classes[role] || 'role-badge-owner'
+    }
+
     onMounted(() => {
       loadUsers()
     })
@@ -340,13 +553,20 @@ export default {
       userRoleFilter,
       userStatusFilter,
       showNewUserModal,
+      showRoleChangeModal,
+      roleChangeTarget,
       newUserForm,
       createNewUser,
       resetUserForm,
       deactivateUser,
       activateUser,
       deleteUser,
-      searchUsers
+      searchUsers,
+      changeUserRole,
+      confirmRoleChange,
+      formatRole,
+      getRoleIcon,
+      getRoleBadgeClass
     }
   }
 }
@@ -378,5 +598,185 @@ export default {
 .badge-soft-red {
   background-color: #fee2e2;
   color: #991b1b;
+}
+
+/* Enhanced Role Dropdown Styling */
+.role-dropdown {
+  position: relative;
+}
+
+.role-dropdown-btn {
+  min-width: 160px;
+  padding: 0.5rem 1rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-align: left;
+  border: 2px solid transparent;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.role-dropdown-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.role-dropdown-btn:active {
+  transform: translateY(0);
+}
+
+/* Role-specific badge colors */
+.role-badge-owner {
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+.role-badge-owner:hover {
+  background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+  color: #1f2937;
+  border-color: #9ca3af;
+}
+
+.role-badge-officer {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #1e40af;
+  border-color: #93c5fd;
+}
+
+.role-badge-officer:hover {
+  background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
+  color: #1e3a8a;
+  border-color: #60a5fa;
+}
+
+.role-badge-admin {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #991b1b;
+  border-color: #fca5a5;
+}
+
+.role-badge-admin:hover {
+  background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
+  color: #7f1d1d;
+  border-color: #f87171;
+}
+
+/* Dropdown Menu */
+.role-dropdown-menu {
+  min-width: 320px;
+  padding: 0.5rem;
+  border-radius: 1rem;
+  margin-top: 0.5rem;
+  animation: dropdownSlideIn 0.2s ease-out;
+}
+
+@keyframes dropdownSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdown-header {
+  padding: 0.5rem 1rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.5px;
+  color: #6b7280;
+}
+
+/* Dropdown Items */
+.role-dropdown-item {
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 0.25rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.role-dropdown-item:hover:not(.disabled) {
+  background-color: #f9fafb;
+  transform: translateX(4px);
+}
+
+.role-dropdown-item.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: #f3f4f6;
+}
+
+.role-dropdown-item.active {
+  background-color: #f0fdf4;
+  border-left: 3px solid #10b981;
+  padding-left: calc(1rem - 3px);
+}
+
+/* Role Icon Circle */
+.role-icon-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  transition: all 0.2s ease;
+}
+
+.role-dropdown-item:hover:not(.disabled) .role-icon-circle {
+  transform: scale(1.1) rotate(5deg);
+}
+
+.role-dropdown-item.active .role-icon-circle {
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+/* Role descriptions */
+.role-dropdown-item small {
+  font-size: 0.75rem;
+  line-height: 1.2;
+  display: block;
+  margin-top: 2px;
+}
+
+/* Checkmark icon */
+.role-dropdown-item .bi-check-circle-fill {
+  font-size: 1.25rem;
+  animation: checkBounce 0.3s ease;
+}
+
+@keyframes checkBounce {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+/* Dropdown divider */
+.dropdown-divider {
+  opacity: 0.1;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .role-dropdown-btn {
+    min-width: 140px;
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+  }
+  
+  .role-dropdown-menu {
+    min-width: 280px;
+  }
+  
+  .role-icon-circle {
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
+  }
 }
 </style>

@@ -108,13 +108,28 @@ exports.getUserById = async (req, res, next) => {
 
 exports.updateUserRole = async (req, res, next) => {
   try {
-    const { role } = req.body;
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { role },
-      { new: true, runValidators: true }
-    ).select('-password');
+    const { newRole } = req.body;
+    const userId = req.params.id;
+    
+    // Validate role
+    const validRoles = ['Land_Owner', 'Land_Officer', 'ADMINISTRATOR'];
+    if (!validRoles.includes(newRole)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid role. Valid roles are: Land_Owner, Land_Officer, ADMINISTRATOR'
+      });
+    }
 
+    // Prevent self-role change
+    if (userId === req.user._id.toString()) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'You cannot change your own role'
+      });
+    }
+
+    // Find user and get old role
+    const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
         status: 'error',
@@ -122,19 +137,58 @@ exports.updateUserRole = async (req, res, next) => {
       });
     }
 
+    const oldRole = user.role;
+
+    // Prevent removing last administrator
+    if (oldRole === 'ADMINISTRATOR' && newRole !== 'ADMINISTRATOR') {
+      const adminCount = await User.countDocuments({ role: 'ADMINISTRATOR' });
+      if (adminCount <= 1) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Cannot remove the last administrator. Promote another user to administrator first.'
+        });
+      }
+    }
+
+    // Update role
+    user.role = newRole;
+    await user.save();
+
     // Create audit log
     await AuditLog.create({
       user: req.user._id,
-      action: 'UPDATE_USER_ROLE',
+      action: 'ROLE_CHANGED',
       resourceType: 'User',
       resourceId: user._id,
-      details: `Updated user role to: ${role}`,
+      details: `Changed role from ${oldRole} to ${newRole} for user: ${user.fullName} (${user.email})`,
       ipAddress: req.ip
     });
 
+    // Try to create notification for the user (may fail if Notification model doesn't exist)
+    try {
+      const Notification = require('../models/Notification');
+      await Notification.create({
+        user: userId,
+        type: 'ROLE_CHANGED',
+        title: 'Your Role Has Been Updated',
+        message: `Your role has been changed from ${oldRole} to ${newRole} by an administrator.`,
+        priority: 'HIGH'
+      });
+    } catch (notifError) {
+      console.log('Notification model not available, skipping notification creation');
+    }
+
+    const userResponse = user.toObject();
+    delete userResponse.password;
+
     res.status(200).json({
       status: 'success',
-      data: { user }
+      message: 'User role updated successfully',
+      data: { 
+        user: userResponse,
+        oldRole,
+        newRole
+      }
     });
   } catch (error) {
     next(error);

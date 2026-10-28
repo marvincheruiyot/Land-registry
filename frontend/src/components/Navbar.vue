@@ -336,6 +336,7 @@
 import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useTranslation } from '@/composables/useTranslation'
 import api from '@/services/api'
 
 export default {
@@ -343,6 +344,7 @@ export default {
   setup() {
     const router = useRouter()
     const authStore = useAuthStore()
+    const { t } = useTranslation()
 
     const user = computed(() => authStore.user)
     const isLandOfficer = computed(() => authStore.isLandOfficer)

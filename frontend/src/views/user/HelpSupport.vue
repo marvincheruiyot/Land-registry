@@ -22,13 +22,13 @@
             <div class="accordion" id="faqAccordion">
               <!-- FAQ 1 -->
               <div class="accordion-item border-0 mb-2 rounded-3 overflow-hidden">
-                <h2 class="accordion-header" id="heading1">
+                <h2 class="accordion-header">
                   <button class="accordion-button bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq1" aria-expanded="true" aria-controls="faq1">
                     <i class="bi bi-question-circle me-2 text-primary"></i>
                     How do I view my land parcels?
                   </button>
                 </h2>
-                <div id="faq1" class="accordion-collapse collapse show" aria-labelledby="heading1" data-bs-parent="#faqAccordion">
+                <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
                   <div class="accordion-body bg-white">
                     <p class="mb-2"><strong>Step-by-step instructions:</strong></p>
                     <ol class="mb-0">
@@ -43,13 +43,13 @@
 
               <!-- FAQ 2 -->
               <div class="accordion-item border-0 mb-2 rounded-3 overflow-hidden">
-                <h2 class="accordion-header" id="heading2">
+                <h2 class="accordion-header">
                   <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq2" aria-expanded="false" aria-controls="faq2">
                     <i class="bi bi-question-circle me-2 text-primary"></i>
                     How do I transfer land ownership?
                   </button>
                 </h2>
-                <div id="faq2" class="accordion-collapse collapse" aria-labelledby="heading2" data-bs-parent="#faqAccordion">
+                <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
                   <div class="accordion-body bg-white">
                     <p class="mb-2"><strong>Follow these steps:</strong></p>
                     <ol class="mb-3">
@@ -72,13 +72,13 @@
 
               <!-- FAQ 3 -->
               <div class="accordion-item border-0 mb-2 rounded-3 overflow-hidden">
-                <h2 class="accordion-header" id="heading3">
+                <h2 class="accordion-header">
                   <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq3" aria-expanded="false" aria-controls="faq3">
                     <i class="bi bi-question-circle me-2 text-primary"></i>
                     How do I verify a land document?
                   </button>
                 </h2>
-                <div id="faq3" class="accordion-collapse collapse" aria-labelledby="heading3" data-bs-parent="#faqAccordion">
+                <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
                   <div class="accordion-body bg-white">
                     <p class="mb-2"><strong>Verification steps:</strong></p>
                     <ol class="mb-3">
@@ -104,13 +104,13 @@
 
               <!-- FAQ 4 -->
               <div class="accordion-item border-0 mb-2 rounded-3 overflow-hidden">
-                <h2 class="accordion-header" id="heading4">
+                <h2 class="accordion-header">
                   <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq4" aria-expanded="false" aria-controls="faq4">
                     <i class="bi bi-question-circle me-2 text-primary"></i>
                     What if I don't see my land parcel?
                   </button>
                 </h2>
-                <div id="faq4" class="accordion-collapse collapse" aria-labelledby="heading4" data-bs-parent="#faqAccordion">
+                <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
                   <div class="accordion-body bg-white">
                     <p class="mb-2"><strong>Troubleshooting steps:</strong></p>
                     <ol class="mb-3">
@@ -130,13 +130,13 @@
 
               <!-- FAQ 5 -->
               <div class="accordion-item border-0 mb-2 rounded-3 overflow-hidden">
-                <h2 class="accordion-header" id="heading5">
+                <h2 class="accordion-header">
                   <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq5" aria-expanded="false" aria-controls="faq5">
                     <i class="bi bi-question-circle me-2 text-primary"></i>
                     How long does a land transfer take?
                   </button>
                 </h2>
-                <div id="faq5" class="accordion-collapse collapse" aria-labelledby="heading5" data-bs-parent="#faqAccordion">
+                <div id="faq5" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
                   <div class="accordion-body bg-white">
                     <p class="mb-2"><strong>Expected processing times:</strong></p>
                     <ul class="mb-3">
@@ -157,13 +157,13 @@
 
               <!-- FAQ 6 -->
               <div class="accordion-item border-0 mb-2 rounded-3 overflow-hidden">
-                <h2 class="accordion-header" id="heading6">
+                <h2 class="accordion-header">
                   <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq6" aria-expanded="false" aria-controls="faq6">
                     <i class="bi bi-question-circle me-2 text-primary"></i>
                     How do I update my profile information?
                   </button>
                 </h2>
-                <div id="faq6" class="accordion-collapse collapse" aria-labelledby="heading6" data-bs-parent="#faqAccordion">
+                <div id="faq6" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
                   <div class="accordion-body bg-white">
                     <p class="mb-2"><strong>Update your information:</strong></p>
                     <ol class="mb-3">
@@ -188,13 +188,13 @@
 
               <!-- FAQ 7 -->
               <div class="accordion-item border-0 mb-2 rounded-3 overflow-hidden">
-                <h2 class="accordion-header" id="heading7">
+                <h2 class="accordion-header">
                   <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq7" aria-expanded="false" aria-controls="faq7">
                     <i class="bi bi-question-circle me-2 text-primary"></i>
                     What documents do I need for land transfer?
                   </button>
                 </h2>
-                <div id="faq7" class="accordion-collapse collapse" aria-labelledby="heading7" data-bs-parent="#faqAccordion">
+                <div id="faq7" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
                   <div class="accordion-body bg-white">
                     <p class="mb-2"><strong>Required documents checklist:</strong></p>
                     <ol class="mb-3">
@@ -219,13 +219,13 @@
 
               <!-- FAQ 8 -->
               <div class="accordion-item border-0 mb-2 rounded-3 overflow-hidden">
-                <h2 class="accordion-header" id="heading8">
+                <h2 class="accordion-header">
                   <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#faq8" aria-expanded="false" aria-controls="faq8">
                     <i class="bi bi-question-circle me-2 text-primary"></i>
                     How secure is my data?
                   </button>
                 </h2>
-                <div id="faq8" class="accordion-collapse collapse" aria-labelledby="heading8" data-bs-parent="#faqAccordion">
+                <div id="faq8" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
                   <div class="accordion-body bg-white">
                     <p class="mb-2"><strong>Security measures in place:</strong></p>
                     <ul class="mb-3">
@@ -380,7 +380,7 @@
 </template>
 
 <script>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import Navbar from '@/components/Navbar.vue'
 import api from '@/services/api'
@@ -391,6 +391,23 @@ export default {
   setup() {
     const authStore = useAuthStore()
     const user = computed(() => authStore.user)
+
+    // Initialize Bootstrap collapse on mount
+    onMounted(() => {
+      // Force Bootstrap to initialize the accordion properly
+      if (typeof window.bootstrap !== 'undefined') {
+        const accordionElement = document.getElementById('faqAccordion')
+        if (accordionElement) {
+          // Initialize all collapse elements
+          const collapseElementList = accordionElement.querySelectorAll('.collapse')
+          collapseElementList.forEach(collapseEl => {
+            new window.bootstrap.Collapse(collapseEl, {
+              toggle: false
+            })
+          })
+        }
+      }
+    })
 
     const showTicketModal = ref(false)
     const ticketForm = ref({
@@ -454,3 +471,36 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.accordion-button {
+  font-weight: 600;
+}
+
+.accordion-button:not(.collapsed) {
+  background-color: #f8f9fa !important;
+  color: #212529;
+  box-shadow: none !important;
+}
+
+.accordion-button:focus {
+  border-color: #dee2e6;
+  box-shadow: none !important;
+}
+
+.accordion-item {
+  background-color: #fff;
+}
+
+.accordion-body {
+  padding: 1.25rem;
+}
+
+/* Override any conflicting CSS */
+.accordion-collapse {
+  -webkit-transition: none !important;
+  -moz-transition: none !important;
+  -o-transition: none !important;
+  transition: none !important;
+}
+</style>
