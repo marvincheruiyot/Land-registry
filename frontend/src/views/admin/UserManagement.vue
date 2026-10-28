@@ -75,79 +75,120 @@
                     </td>
                     <td class="fw-semibold text-dark py-3">{{ u.nationalId }}</td>
                     <td class="py-3">
-                      <!-- Role Dropdown -->
-                      <div class="dropdown role-dropdown">
+                      <!-- Role Dropdown with Bootstrap Styling -->
+                      <div class="dropdown">
                         <button 
-                          :class="['btn btn-sm dropdown-toggle role-dropdown-btn', getRoleBadgeClass(u.role)]"
+                          :class="[
+                            'btn btn-sm dropdown-toggle fw-semibold',
+                            u.role === 'Land_Owner' ? 'btn-outline-secondary' : '',
+                            u.role === 'Land_Officer' ? 'btn-outline-primary' : '',
+                            (u.role === 'ADMINISTRATOR' || u.role === 'Administrator') ? 'btn-outline-danger' : ''
+                          ]"
                           type="button" 
                           :id="'roleDropdown' + u.id" 
                           data-bs-toggle="dropdown"
                           aria-expanded="false"
+                          style="min-width: 180px;"
                         >
                           <i :class="[getRoleIcon(u.role), 'me-2']"></i>
-                          <span>{{ formatRole(u.role) }}</span>
+                          {{ formatRole(u.role) }}
                         </button>
-                        <ul class="dropdown-menu role-dropdown-menu shadow-lg border-0" :aria-labelledby="'roleDropdown' + u.id">
-                          <li class="dropdown-header text-muted small fw-semibold">
-                            <i class="bi bi-arrow-repeat me-1"></i> CHANGE ROLE TO
+                        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0" :aria-labelledby="'roleDropdown' + u.id" style="min-width: 350px;">
+                          <!-- Header -->
+                          <li>
+                            <h6 class="dropdown-header text-uppercase fw-bold text-muted small">
+                              <i class="bi bi-arrow-repeat me-1"></i>
+                              Change Role To
+                            </h6>
                           </li>
-                          <li><hr class="dropdown-divider my-1"></li>
+                          <li><hr class="dropdown-divider"></li>
+                          
+                          <!-- Land Owner Option -->
                           <li>
                             <a 
-                              class="dropdown-item role-dropdown-item" 
-                              :class="{ 'active': u.role === 'Land_Owner', 'disabled': u.role === 'Land_Owner' }"
+                              :class="[
+                                'dropdown-item d-flex align-items-center py-3',
+                                u.role === 'Land_Owner' ? 'active disabled' : ''
+                              ]"
                               @click="u.role !== 'Land_Owner' && changeUserRole(u.id, 'Land_Owner', u.name)"
                               href="javascript:void(0)"
+                              :style="u.role === 'Land_Owner' ? 'pointer-events: none; opacity: 0.7;' : ''"
                             >
-                              <div class="d-flex align-items-center">
-                                <div class="role-icon-circle bg-secondary-subtle text-secondary me-3">
-                                  <i class="bi bi-person-circle"></i>
+                              <div class="me-3">
+                                <div class="rounded-3 bg-secondary bg-opacity-10 text-secondary p-3">
+                                  <i class="bi bi-person-circle fs-4"></i>
                                 </div>
-                                <div class="flex-grow-1">
-                                  <div class="fw-semibold">Land Owner</div>
-                                  <small class="text-muted">Owns and manages land parcels</small>
-                                </div>
-                                <i v-if="u.role === 'Land_Owner'" class="bi bi-check-circle-fill text-success ms-2"></i>
+                              </div>
+                              <div class="flex-grow-1">
+                                <div class="fw-bold text-dark">Land Owner</div>
+                                <small class="text-muted">Owns and manages land parcels</small>
+                              </div>
+                              <div v-if="u.role === 'Land_Owner'" class="ms-2">
+                                <i class="bi bi-check-circle-fill text-success fs-5"></i>
                               </div>
                             </a>
                           </li>
+                          
+                          <!-- Land Officer Option -->
                           <li>
                             <a 
-                              class="dropdown-item role-dropdown-item" 
-                              :class="{ 'active': u.role === 'Land_Officer', 'disabled': u.role === 'Land_Officer' }"
+                              :class="[
+                                'dropdown-item d-flex align-items-center py-3',
+                                u.role === 'Land_Officer' ? 'active disabled' : ''
+                              ]"
                               @click="u.role !== 'Land_Officer' && changeUserRole(u.id, 'Land_Officer', u.name)"
                               href="javascript:void(0)"
+                              :style="u.role === 'Land_Officer' ? 'pointer-events: none; opacity: 0.7;' : ''"
                             >
-                              <div class="d-flex align-items-center">
-                                <div class="role-icon-circle bg-primary-subtle text-primary me-3">
-                                  <i class="bi bi-person-badge"></i>
+                              <div class="me-3">
+                                <div class="rounded-3 bg-primary bg-opacity-10 text-primary p-3">
+                                  <i class="bi bi-person-badge fs-4"></i>
                                 </div>
-                                <div class="flex-grow-1">
-                                  <div class="fw-semibold">Land Officer</div>
-                                  <small class="text-muted">Manages land records & transfers</small>
-                                </div>
-                                <i v-if="u.role === 'Land_Officer'" class="bi bi-check-circle-fill text-success ms-2"></i>
+                              </div>
+                              <div class="flex-grow-1">
+                                <div class="fw-bold text-dark">Land Officer</div>
+                                <small class="text-muted">Manages land records & transfers</small>
+                              </div>
+                              <div v-if="u.role === 'Land_Officer'" class="ms-2">
+                                <i class="bi bi-check-circle-fill text-success fs-5"></i>
                               </div>
                             </a>
                           </li>
+                          
+                          <!-- Administrator Option -->
                           <li>
                             <a 
-                              class="dropdown-item role-dropdown-item" 
-                              :class="{ 'active': u.role === 'ADMINISTRATOR' || u.role === 'Administrator', 'disabled': u.role === 'ADMINISTRATOR' || u.role === 'Administrator' }"
+                              :class="[
+                                'dropdown-item d-flex align-items-center py-3',
+                                (u.role === 'ADMINISTRATOR' || u.role === 'Administrator') ? 'active disabled' : ''
+                              ]"
                               @click="(u.role !== 'ADMINISTRATOR' && u.role !== 'Administrator') && changeUserRole(u.id, 'ADMINISTRATOR', u.name)"
                               href="javascript:void(0)"
+                              :style="(u.role === 'ADMINISTRATOR' || u.role === 'Administrator') ? 'pointer-events: none; opacity: 0.7;' : ''"
                             >
-                              <div class="d-flex align-items-center">
-                                <div class="role-icon-circle bg-danger-subtle text-danger me-3">
-                                  <i class="bi bi-shield-fill-check"></i>
+                              <div class="me-3">
+                                <div class="rounded-3 bg-danger bg-opacity-10 text-danger p-3">
+                                  <i class="bi bi-shield-fill-check fs-4"></i>
                                 </div>
-                                <div class="flex-grow-1">
-                                  <div class="fw-semibold">Administrator</div>
-                                  <small class="text-muted">Full system access & control</small>
-                                </div>
-                                <i v-if="u.role === 'ADMINISTRATOR' || u.role === 'Administrator'" class="bi bi-check-circle-fill text-success ms-2"></i>
+                              </div>
+                              <div class="flex-grow-1">
+                                <div class="fw-bold text-dark">Administrator</div>
+                                <small class="text-muted">Full system access & control</small>
+                              </div>
+                              <div v-if="u.role === 'ADMINISTRATOR' || u.role === 'Administrator'" class="ms-2">
+                                <i class="bi bi-check-circle-fill text-success fs-5"></i>
                               </div>
                             </a>
+                          </li>
+                          
+                          <li><hr class="dropdown-divider"></li>
+                          <li>
+                            <div class="px-3 py-2">
+                              <small class="text-muted">
+                                <i class="bi bi-info-circle me-1"></i>
+                                Role changes take effect immediately
+                              </small>
+                            </div>
                           </li>
                         </ul>
                       </div>
@@ -532,16 +573,6 @@ export default {
       return icons[role] || 'bi bi-person'
     }
 
-    const getRoleBadgeClass = (role) => {
-      const classes = {
-        'Land_Owner': 'role-badge-owner',
-        'Land_Officer': 'role-badge-officer',
-        'ADMINISTRATOR': 'role-badge-admin',
-        'Administrator': 'role-badge-admin'
-      }
-      return classes[role] || 'role-badge-owner'
-    }
-
     onMounted(() => {
       loadUsers()
     })
@@ -565,14 +596,14 @@ export default {
       changeUserRole,
       confirmRoleChange,
       formatRole,
-      getRoleIcon,
-      getRoleBadgeClass
+      getRoleIcon
     }
   }
 }
 </script>
 
 <style scoped>
+/* Avatar Circle */
 .avatar-circle {
   width: 48px;
   height: 48px;
@@ -583,6 +614,7 @@ export default {
   font-weight: 600;
 }
 
+/* Status Badges */
 .badge-pill-custom {
   padding: 0.35rem 0.75rem;
   border-radius: 1rem;
@@ -600,183 +632,49 @@ export default {
   color: #991b1b;
 }
 
-/* Enhanced Role Dropdown Styling */
-.role-dropdown {
-  position: relative;
+/* Dropdown Menu Enhancements */
+.dropdown-menu {
+  border-radius: 1rem;
+  padding: 0.5rem;
 }
 
-.role-dropdown-btn {
-  min-width: 160px;
-  padding: 0.5rem 1rem;
-  border-radius: 0.75rem;
-  font-weight: 600;
-  font-size: 0.85rem;
-  text-align: left;
-  border: 2px solid transparent;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+.dropdown-item {
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
 }
 
-.role-dropdown-btn:hover {
+.dropdown-item:hover:not(.disabled) {
+  background-color: #f8f9fa;
+  transform: translateX(3px);
+}
+
+.dropdown-item.active {
+  background-color: #e8f5e9;
+  border-left: 3px solid #10b981;
+}
+
+/* Smooth transitions for buttons */
+.btn {
+  transition: all 0.2s ease;
+}
+
+.btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.role-dropdown-btn:active {
+.btn:active {
   transform: translateY(0);
 }
 
-/* Role-specific badge colors */
-.role-badge-owner {
-  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-  color: #374151;
-  border-color: #d1d5db;
-}
-
-.role-badge-owner:hover {
-  background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
-  color: #1f2937;
-  border-color: #9ca3af;
-}
-
-.role-badge-officer {
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-  color: #1e40af;
-  border-color: #93c5fd;
-}
-
-.role-badge-officer:hover {
-  background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
-  color: #1e3a8a;
-  border-color: #60a5fa;
-}
-
-.role-badge-admin {
-  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-  color: #991b1b;
-  border-color: #fca5a5;
-}
-
-.role-badge-admin:hover {
-  background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
-  color: #7f1d1d;
-  border-color: #f87171;
-}
-
-/* Dropdown Menu */
-.role-dropdown-menu {
-  min-width: 320px;
-  padding: 0.5rem;
-  border-radius: 1rem;
-  margin-top: 0.5rem;
-  animation: dropdownSlideIn 0.2s ease-out;
-}
-
-@keyframes dropdownSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.dropdown-header {
-  padding: 0.5rem 1rem;
-  font-size: 0.7rem;
-  letter-spacing: 0.5px;
-  color: #6b7280;
-}
-
-/* Dropdown Items */
-.role-dropdown-item {
-  padding: 0.75rem 1rem;
-  border-radius: 0.5rem;
-  margin-bottom: 0.25rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.role-dropdown-item:hover:not(.disabled) {
-  background-color: #f9fafb;
-  transform: translateX(4px);
-}
-
-.role-dropdown-item.disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  background-color: #f3f4f6;
-}
-
-.role-dropdown-item.active {
-  background-color: #f0fdf4;
-  border-left: 3px solid #10b981;
-  padding-left: calc(1rem - 3px);
-}
-
-/* Role Icon Circle */
-.role-icon-circle {
-  width: 40px;
-  height: 40px;
-  border-radius: 0.75rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.2rem;
-  transition: all 0.2s ease;
-}
-
-.role-dropdown-item:hover:not(.disabled) .role-icon-circle {
-  transform: scale(1.1) rotate(5deg);
-}
-
-.role-dropdown-item.active .role-icon-circle {
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
-}
-
-/* Role descriptions */
-.role-dropdown-item small {
-  font-size: 0.75rem;
-  line-height: 1.2;
-  display: block;
-  margin-top: 2px;
-}
-
-/* Checkmark icon */
-.role-dropdown-item .bi-check-circle-fill {
-  font-size: 1.25rem;
-  animation: checkBounce 0.3s ease;
-}
-
+/* Checkmark animation */
 @keyframes checkBounce {
-  0% { transform: scale(0); }
-  50% { transform: scale(1.2); }
+  0% { transform: scale(0.8); }
+  50% { transform: scale(1.1); }
   100% { transform: scale(1); }
 }
 
-/* Dropdown divider */
-.dropdown-divider {
-  opacity: 0.1;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .role-dropdown-btn {
-    min-width: 140px;
-    font-size: 0.8rem;
-    padding: 0.4rem 0.8rem;
-  }
-  
-  .role-dropdown-menu {
-    min-width: 280px;
-  }
-  
-  .role-icon-circle {
-    width: 36px;
-    height: 36px;
-    font-size: 1rem;
-  }
+.bi-check-circle-fill {
+  animation: checkBounce 0.3s ease;
 }
 </style>

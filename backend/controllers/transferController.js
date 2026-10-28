@@ -178,10 +178,12 @@ exports.getTransferById = async (req, res, next) => {
 // Approve Transfer
 exports.approveTransfer = async (req, res, next) => {
   try {
+    const emailService = require('../utils/emailService');
+    
     const transfer = await Transfer.findById(req.params.id)
       .populate('landParcel', 'parcelNumber location')
-      .populate('previousOwner', 'fullName nationalId')
-      .populate('newOwner', 'fullName nationalId');
+      .populate('previousOwner', 'fullName nationalId email')
+      .populate('newOwner', 'fullName nationalId email');
 
     if (!transfer) {
       return res.status(404).json({
@@ -299,9 +301,62 @@ exports.approveTransfer = async (req, res, next) => {
       priority: 'high'
     });
 
+    // **SEND EMAILS TO BOTH PARTIES**
+    const emailData = {
+      parcelNumber: transfer.landParcel.parcelNumber,
+      location: `${transfer.landParcel.location?.county || ''}, ${transfer.landParcel.location?.subCounty || ''}`.trim(),
+      transferType: transfer.transferType,
+      previousOwner: transfer.previousOwner.fullName,
+      previousOwnerNationalId: transfer.previousOwner.nationalId,
+      newOwner: transfer.newOwner.fullName,
+      newOwnerNationalId: transfer.newOwner.nationalId,
+      approvedBy: req.user.fullName,
+      approvedDate: new Date().toLocaleDateString('en-KE', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      }),
+      documentsTransferred: documentsTransferred
+    };
+
+    console.log('📧 Sending approval emails...');
+    console.log('Previous Owner Email:', transfer.previousOwner.email);
+    console.log('New Owner Email:', transfer.newOwner.email);
+
+    // Email to previous owner (seller)
+    if (transfer.previousOwner.email) {
+      console.log('Sending email to previous owner:', transfer.previousOwner.email);
+      emailService.sendTransferApprovalEmail(
+        transfer.previousOwner.email,
+        { ...emailData, recipientName: transfer.previousOwner.fullName, isNewOwner: false }
+      ).then(result => {
+        console.log('✅ Email sent to previous owner:', result);
+      }).catch(err => {
+        console.error('❌ Failed to send email to previous owner:', err.message);
+      });
+    } else {
+      console.warn('⚠️ Previous owner has no email address');
+    }
+
+    // Email to new owner (buyer)
+    if (transfer.newOwner.email) {
+      console.log('Sending email to new owner:', transfer.newOwner.email);
+      emailService.sendTransferApprovalEmail(
+        transfer.newOwner.email,
+        { ...emailData, recipientName: transfer.newOwner.fullName, isNewOwner: true }
+      ).then(result => {
+        console.log('✅ Email sent to new owner:', result);
+      }).catch(err => {
+        console.error('❌ Failed to send email to new owner:', err.message);
+      });
+    } else {
+      console.warn('⚠️ New owner has no email address');
+    }
+
     res.status(200).json({
       status: 'success',
-      message: `Transfer approved and title successfully conveyed to new owner. ${documentsTransferred} document(s) transferred.`
+      message: `Transfer approved and title successfully conveyed to new owner. ${documentsTransferred} document(s) transferred. Email notifications sent to both parties.`
     });
   } catch (error) {
     next(error);
@@ -311,11 +366,13 @@ exports.approveTransfer = async (req, res, next) => {
 // Reject Transfer
 exports.rejectTransfer = async (req, res, next) => {
   try {
+    const emailService = require('../utils/emailService');
     const { rejectionReason } = req.body;
+    
     const transfer = await Transfer.findById(req.params.id)
       .populate('landParcel', 'parcelNumber location')
-      .populate('previousOwner', 'fullName nationalId')
-      .populate('newOwner', 'fullName nationalId');
+      .populate('previousOwner', 'fullName nationalId email')
+      .populate('newOwner', 'fullName nationalId email');
 
     if (!transfer) {
       return res.status(404).json({
@@ -380,9 +437,44 @@ exports.rejectTransfer = async (req, res, next) => {
       priority: 'medium'
     });
 
+    // **SEND REJECTION EMAILS TO BOTH PARTIES**
+    const emailData = {
+      parcelNumber: transfer.landParcel.parcelNumber,
+      location: `${transfer.landParcel.location?.county || ''}, ${transfer.landParcel.location?.subCounty || ''}`.trim(),
+      transferType: transfer.transferType,
+      previousOwner: transfer.previousOwner.fullName,
+      previousOwnerNationalId: transfer.previousOwner.nationalId,
+      newOwner: transfer.newOwner.fullName,
+      newOwnerNationalId: transfer.newOwner.nationalId,
+      rejectedBy: req.user.fullName,
+      rejectedDate: new Date().toLocaleDateString('en-KE', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      }),
+      rejectionReason: rejectionReason || 'Not specified'
+    };
+
+    // Email to previous owner (seller)
+    if (transfer.previousOwner.email) {
+      emailService.sendTransferRejectionEmail(
+        transfer.previousOwner.email,
+        { ...emailData, recipientName: transfer.previousOwner.fullName }
+      ).catch(err => console.error('Failed to send rejection email to previous owner:', err));
+    }
+
+    // Email to new owner (buyer)
+    if (transfer.newOwner.email) {
+      emailService.sendTransferRejectionEmail(
+        transfer.newOwner.email,
+        { ...emailData, recipientName: transfer.newOwner.fullName }
+      ).catch(err => console.error('Failed to send rejection email to new owner:', err));
+    }
+
     res.status(200).json({
       status: 'success',
-      message: 'Transfer request rejected.'
+      message: 'Transfer request rejected. Email notifications sent to both parties.'
     });
   } catch (error) {
     next(error);

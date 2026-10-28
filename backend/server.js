@@ -19,6 +19,7 @@ const reportRoutes = require('./routes/reportRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const supportRoutes = require('./routes/supportRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const testRoutes = require('./routes/testRoutes');
 
 // Import middleware
 const errorHandler = require('./middleware/errorHandler');
@@ -81,6 +82,7 @@ app.use(`/api/${API_VERSION}/reports`, reportRoutes);
 app.use(`/api/${API_VERSION}/admin`, adminRoutes);
 app.use(`/api/${API_VERSION}/support-tickets`, supportRoutes);
 app.use(`/api/${API_VERSION}/notifications`, notificationRoutes);
+app.use(`/api/${API_VERSION}/test`, testRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
