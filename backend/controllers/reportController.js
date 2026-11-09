@@ -144,7 +144,7 @@ exports.generateTodayActivity = async (req, res, next) => {
     const reportTitle = "TODAY'S ACTIVITY REPORT";
     const totalRecords = todayParcels.length + todayTransfers.length + todayVerifications.length;
     
-    const pdfContent = generatePDFContent(reportTitle, reportContent, {
+    const pdfContent = await generatePDFContent(reportTitle, reportContent, {
       startDate: today,
       endDate: endOfDay,
       generatedBy: req.user?.fullName || 'System',
@@ -159,7 +159,7 @@ exports.generateTodayActivity = async (req, res, next) => {
       startDate: today,
       endDate: endOfDay,
       generatedBy: req.user._id,
-      fileSize: Buffer.byteLength(pdfContent),
+      fileSize: pdfContent.length,
       recordCount: totalRecords,
       status: 'completed',
       metadata: {
@@ -173,7 +173,7 @@ exports.generateTodayActivity = async (req, res, next) => {
     const reportName = `Todays_Activity_${new Date().toISOString().split('T')[0]}.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${reportName}"`);
-    res.send(Buffer.from(pdfContent));
+    res.send(pdfContent);
     
   } catch (error) {
     console.error('Generate today activity error:', error);
@@ -181,85 +181,232 @@ exports.generateTodayActivity = async (req, res, next) => {
   }
 };
 
-// Helper function to generate PDF content with tables
+// Helper function to generate CSV content
+function generateCSV(type, data) {
+  let csv = '';
+  
+  switch(type) {
+    case 'daily_registrations':
+      // CSV header
+      csv = 'No.,Parcel Number,Owner Name,National ID,Phone,Email,County,Sub-County,Ward,Size (Acres),Land Use,Title Deed,Registration Date\n';
+      
+      // CSV rows
+      data.forEach((p, idx) => {
+        csv += `${idx + 1},`;
+        csv += `"${p.parcelNumber || 'N/A'}",`;
+        csv += `"${p.currentOwner?.fullName || 'N/A'}",`;
+        csv += `"${p.currentOwner?.nationalId || 'N/A'}",`;
+        csv += `"${p.currentOwner?.phoneNumber || 'N/A'}",`;
+        csv += `"${p.currentOwner?.email || 'N/A'}",`;
+        csv += `"${p.location?.county || 'N/A'}",`;
+        csv += `"${p.location?.subCounty || 'N/A'}",`;
+        csv += `"${p.location?.ward || 'N/A'}",`;
+        csv += `${p.sizeInAcres || 0},`;
+        csv += `"${p.landUse || p.intendedUse || 'N/A'}",`;
+        csv += `"${p.titleDeedNumber || 'Pending'}",`;
+        csv += `"${new Date(p.createdAt).toLocaleString('en-KE')}"\n`;
+      });
+      break;
+      
+    case 'monthly_transfers':
+      // CSV header
+      csv = 'No.,Parcel Number,Previous Owner,Previous Owner ID,New Owner,New Owner ID,Transfer Type,Status,Amount,Location,Size (Acres),Date\n';
+      
+      // CSV rows
+      data.forEach((t, idx) => {
+        csv += `${idx + 1},`;
+        csv += `"${t.landParcel?.parcelNumber || 'N/A'}",`;
+        csv += `"${t.previousOwner?.fullName || 'N/A'}",`;
+        csv += `"${t.previousOwner?.nationalId || 'N/A'}",`;
+        csv += `"${t.newOwner?.fullName || 'N/A'}",`;
+        csv += `"${t.newOwner?.nationalId || 'N/A'}",`;
+        csv += `"${t.transferType || 'N/A'}",`;
+        csv += `"${t.status || 'pending'}",`;
+        csv += `${t.transferAmount || 0},`;
+        csv += `"${t.landParcel?.location?.county || 'N/A'}",`;
+        csv += `${t.landParcel?.sizeInAcres || 0},`;
+        csv += `"${new Date(t.createdAt).toLocaleString('en-KE')}"\n`;
+      });
+      break;
+      
+    case 'user_activity':
+      // CSV header
+      csv = 'No.,Action,User,Role,Date\n';
+      
+      // CSV rows
+      data.forEach((item, idx) => {
+        csv += `${idx + 1},`;
+        csv += `"${item.action}",`;
+        csv += `"${item.user}",`;
+        csv += `"${item.role}",`;
+        csv += `"${item.date}"\n`;
+      });
+      break;
+      
+    case 'pending_requests':
+      // CSV header
+      csv = 'No.,Parcel Number,Location,Previous Owner,New Owner,Type,Days Pending,Submitted Date\n';
+      
+      // CSV rows
+      data.forEach((item, idx) => {
+        csv += `${idx + 1},`;
+        csv += `"${item.parcelNumber}",`;
+        csv += `"${item.location}",`;
+        csv += `"${item.previousOwner}",`;
+        csv += `"${item.newOwner}",`;
+        csv += `"${item.type}",`;
+        csv += `${item.daysPending},`;
+        csv += `"${item.date}"\n`;
+      });
+      break;
+      
+    default:
+      csv = 'No data available';
+  }
+  
+  return csv;
+}
+
+// Helper function to generate PDF content with tables using PDFKit
 function generatePDFContent(title, content, options = {}) {
+  const PDFDocument = require('pdfkit');
   const { startDate, endDate, generatedBy, summary } = options;
   
-  // Escape special PDF characters
-  const escapeText = (text) => {
-    if (!text) return 'N/A';
-    return String(text)
-      .replace(/\\/g, '\\\\')
-      .replace(/\(/g, '\\(')
-      .replace(/\)/g, '\\)')
-      .substring(0, 100); // Limit length
-  };
-  
-  const dateStr = startDate ? new Date(startDate).toLocaleDateString('en-KE') : new Date().toLocaleDateString('en-KE');
-  const endDateStr = endDate && new Date(startDate).toDateString() !== new Date(endDate).toDateString() ? ' to ' + new Date(endDate).toLocaleDateString('en-KE') : '';
-  
-  return `%PDF-1.4
-1 0 obj
-<< /Type /Catalog /Pages 2 0 R >>
-endobj
-2 0 obj
-<< /Type /Pages /Kids [3 0 R] /Count 1 >>
-endobj
-3 0 obj
-<< /Type /Page /Parent 2 0 R /Resources 4 0 R /MediaBox [0 0 842 595] /Contents 5 0 R >>
-endobj
-4 0 obj
-<< /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Courier >> /F2 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> /F3 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >>
-endobj
-5 0 obj
-<< /Length ${3500 + content.length} >>
-stream
-BT
-/F2 14 Tf
-50 560 Td
-(REPUBLIC OF KENYA) Tj
-0 -16 Td
-/F2 12 Tf
-(MINISTRY OF LANDS & PHYSICAL PLANNING) Tj
-0 -25 Td
-/F2 11 Tf
-(${escapeText(title)}) Tj
-0 -20 Td
-/F3 8 Tf
-(Report Date: ${escapeText(dateStr + endDateStr)}) Tj
-0 -10 Td
-(Generated: ${escapeText(new Date().toLocaleString('en-KE'))}) Tj
-0 -10 Td
-(Officer: ${escapeText(generatedBy)}) Tj
-${summary ? `0 -10 Td (${escapeText(summary)}) Tj` : ''}
-0 -15 Td
-/F2 8 Tf
-(${'_'.repeat(95)}) Tj
-0 -15 Td
-/F1 7 Tf
-(${content.replace(/\n/g, ') Tj 0 -9 Td (').replace(/[\(\)]/g, '')}) Tj
-ET
-endstream
-endobj
-xref
-0 6
-0000000000 65535 f
-0000000009 00000 n
-0000000058 00000 n
-0000000115 00000 n
-0000000224 00000 n
-0000000399 00000 n
-trailer
-<< /Size 6 /Root 1 0 R >>
-startxref
-${4200 + content.length}
-%%EOF`;
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ 
+        size: 'A4',
+        layout: 'landscape', // Use landscape for better table width
+        margins: { top: 40, bottom: 40, left: 40, right: 40 }
+      });
+      
+      const chunks = [];
+      doc.on('data', chunk => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+      
+      const pageWidth = doc.page.width - 80; // Account for margins
+      
+      // Header
+      doc.fontSize(14).font('Helvetica-Bold')
+         .text('REPUBLIC OF KENYA', { align: 'center' });
+      doc.fontSize(12).text('MINISTRY OF LANDS & PHYSICAL PLANNING', { align: 'center' });
+      doc.moveDown(0.5);
+      
+      // Title
+      doc.fontSize(11).font('Helvetica-Bold')
+         .text(title, { align: 'center' });
+      doc.moveDown(0.5);
+      
+      // Metadata in smaller font
+      doc.fontSize(8).font('Helvetica');
+      const dateStr = startDate ? new Date(startDate).toLocaleDateString('en-KE') : new Date().toLocaleDateString('en-KE');
+      const endDateStr = endDate && new Date(startDate).toDateString() !== new Date(endDate).toDateString() 
+        ? ' to ' + new Date(endDate).toLocaleDateString('en-KE') : '';
+      
+      doc.text(`Report Date: ${dateStr}${endDateStr} | Generated: ${new Date().toLocaleString('en-KE')} | Officer: ${generatedBy || 'System'}`);
+      if (summary) doc.text(summary);
+      doc.moveDown(0.3);
+      
+      // Add line separator
+      doc.moveTo(40, doc.y).lineTo(doc.page.width - 40, doc.y).stroke();
+      doc.moveDown(0.5);
+      
+      // Parse and render content as structured tables
+      const lines = content.split('\\n');
+      let inTable = false;
+      let isHeaderRow = false;
+      
+      doc.fontSize(8).font('Helvetica');
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        
+        // Check if we need a new page
+        if (doc.y > doc.page.height - 100) {
+          doc.addPage();
+          doc.fontSize(8).font('Helvetica');
+        }
+        
+        // Detect section headers (ALL CAPS with colons or "SECTION")
+        if (line.includes('SECTION') || (line === line.toUpperCase() && line.includes(':'))) {
+          doc.fontSize(9).font('Helvetica-Bold');
+          doc.text(line, { continued: false });
+          doc.fontSize(8).font('Helvetica');
+          doc.moveDown(0.3);
+          continue;
+        }
+        
+        // Detect table headers (lines with "No." at start)
+        if (line.trim().startsWith('No.') && line.includes('Parcel')) {
+          doc.fontSize(7).font('Helvetica-Bold');
+          doc.text(line, { continued: false });
+          doc.fontSize(7).font('Helvetica');
+          isHeaderRow = true;
+          inTable = true;
+          continue;
+        }
+        
+        // Detect separator lines (dashes)
+        if (line.trim().match(/^[\-=_]{10,}$/)) {
+          doc.moveTo(40, doc.y).lineTo(doc.page.width - 40, doc.y).stroke();
+          doc.moveDown(0.2);
+          continue;
+        }
+        
+        // Detect data rows (start with number)
+        if (line.trim().match(/^\d+\s+/)) {
+          // Main data row - use slightly larger font
+          doc.fontSize(7).font('Helvetica');
+          doc.text(line, { continued: false });
+          doc.moveDown(0.1);
+          continue;
+        }
+        
+        // Detect sub-information rows (indented with spaces)
+        if (line.trim().length > 0 && line.startsWith('     ')) {
+          doc.fontSize(6.5).font('Helvetica');
+          doc.fillColor('#555555');
+          doc.text(line.trim(), { indent: 20, continued: false });
+          doc.fillColor('#000000');
+          doc.moveDown(0.1);
+          continue;
+        }
+        
+        // Regular text
+        if (line.trim().length > 0) {
+          doc.fontSize(8).font('Helvetica');
+          doc.text(line, { continued: false });
+          doc.moveDown(0.2);
+        } else {
+          doc.moveDown(0.3);
+        }
+      }
+      
+      // Add footer to current page
+      doc.fontSize(6).font('Helvetica')
+         .text('This is an official document from Kenya Land Registry System', 
+               40, doc.page.height - 30, { align: 'center', width: doc.page.width - 80 });
+      
+      doc.end();
+    } catch (error) {
+      reject(error);
+    }
+  });
 }
 
 // Generate Report
 exports.generateReport = async (req, res, next) => {
   try {
     const { type, startDate, endDate, format } = req.body;
+    
+    // Validate format - only allow CSV or Excel
+    if (format && format !== 'csv' && format !== 'excel') {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid format. Only CSV and Excel formats are supported.'
+      });
+    }
     
     // Convert dates
     const start = new Date(startDate);
@@ -405,24 +552,38 @@ exports.generateReport = async (req, res, next) => {
         reportContent = 'Report type not implemented yet.';
     }
     
-    // Generate PDF with actual data
+    // Generate output based on format
     const reportTitle = (type || 'Registry').replace(/_/g, ' ').toUpperCase();
-    const pdfContent = generatePDFContent(reportTitle, reportContent, {
-      startDate,
-      endDate,
-      generatedBy: req.user?.fullName || 'System',
-      summary: `Total Records: ${reportData.length}`
-    });
+    let fileContent;
+    let contentType;
+    let fileExtension;
+    
+    if (format === 'excel' || !format) {
+      // Generate CSV for Excel (Excel can open CSV files)
+      fileContent = generateCSV(type, reportData);
+      contentType = 'text/csv';
+      fileExtension = 'csv';
+    } else if (format === 'csv') {
+      // Generate CSV
+      fileContent = generateCSV(type, reportData);
+      contentType = 'text/csv';
+      fileExtension = 'csv';
+    } else {
+      // Fallback to CSV if unknown format
+      fileContent = generateCSV(type, reportData);
+      contentType = 'text/csv';
+      fileExtension = 'csv';
+    }
     
     // Save report to database
     const reportRecord = await Report.create({
       name: `${reportTitle} - ${new Date(startDate).toLocaleDateString('en-KE')} to ${new Date(endDate).toLocaleDateString('en-KE')}`,
       type,
-      format: format || 'pdf',
+      format: format || 'csv',
       startDate: new Date(startDate),
       endDate: new Date(endDate),
       generatedBy: req.user._id,
-      fileSize: Buffer.byteLength(pdfContent),
+      fileSize: Buffer.isBuffer(fileContent) ? fileContent.length : Buffer.byteLength(fileContent),
       recordCount: reportData.length,
       status: 'completed',
       metadata: {
@@ -431,11 +592,11 @@ exports.generateReport = async (req, res, next) => {
       }
     });
 
-    // Send PDF directly as download
-    const reportName = `${reportTitle}_${new Date().toISOString().split('T')[0]}.pdf`;
-    res.setHeader('Content-Type', 'application/pdf');
+    // Send file
+    const reportName = `${reportTitle.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.${fileExtension}`;
+    res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Disposition', `attachment; filename="${reportName}"`);
-    res.send(Buffer.from(pdfContent));
+    res.send(fileContent);
     
   } catch (error) {
     next(error);
@@ -511,6 +672,54 @@ exports.getStatistics = async (req, res, next) => {
   }
 };
 
+// Get Detailed Data for Tables
+exports.getDetailedData = async (req, res, next) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(today);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    // Fetch today's registrations with owner details
+    const todayRegistrations = await LandParcel.find({
+      createdAt: { $gte: today, $lte: endOfDay }
+    })
+    .populate('currentOwner', 'fullName nationalId phoneNumber')
+    .sort({ createdAt: -1 })
+    .limit(50);
+    
+    // Fetch today's transfers with all details
+    const todayTransfers = await Transfer.find({
+      createdAt: { $gte: today, $lte: endOfDay }
+    })
+    .populate('landParcel', 'parcelNumber location')
+    .populate('previousOwner', 'fullName nationalId phoneNumber')
+    .populate('newOwner', 'fullName nationalId phoneNumber')
+    .sort({ createdAt: -1 })
+    .limit(50);
+    
+    // Fetch today's verifications
+    const todayVerifications = await AuditLog.find({
+      createdAt: { $gte: today, $lte: endOfDay },
+      action: { $in: ['VERIFICATION_PERFORMED', 'DEED_VERIFIED', 'DOCUMENT_VERIFIED'] }
+    })
+    .populate('performedBy', 'fullName role')
+    .sort({ createdAt: -1 })
+    .limit(50);
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        registrations: todayRegistrations,
+        transfers: todayTransfers,
+        verifications: todayVerifications
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Download Report
 exports.downloadReport = async (req, res, next) => {
   try {
@@ -539,7 +748,7 @@ exports.downloadReport = async (req, res, next) => {
     reportContent += `\\nThis report has been downloaded ${report.downloadCount} time(s).\\n`;
     reportContent += `\\nNote: For detailed data, please generate a new report with the date range.`;
     
-    const pdfContent = generatePDFContent(report.name.toUpperCase(), reportContent, {
+    const pdfContent = await generatePDFContent(report.name.toUpperCase(), reportContent, {
       startDate: report.startDate,
       endDate: report.endDate,
       generatedBy: report.generatedBy?.fullName || 'System'
@@ -547,7 +756,7 @@ exports.downloadReport = async (req, res, next) => {
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=${report.name.replace(/\s+/g, '_')}.pdf`);
-    res.send(Buffer.from(pdfContent));
+    res.send(pdfContent);
   } catch (error) {
     next(error);
   }
@@ -558,86 +767,122 @@ exports.downloadQuickReport = async (req, res, next) => {
   try {
     const { type } = req.params;
     const filename = type === 'monthly' ? 'Monthly_Registry_Summary.pdf' : 'County_Land_Revenue.pdf';
-    const reportTitle = type === 'monthly' ? 'Monthly Registry Summary' : 'County Land Revenue Report';
+    const reportTitle = type === 'monthly' ? 'MONTHLY REGISTRY SUMMARY' : 'COUNTY LAND REVENUE REPORT';
     
-    // Fetch relevant data based on report type
-    let reportData = '';
+    // Fetch relevant detailed data based on report type
+    let reportContent = '';
     const today = new Date();
     const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
     
     if (type === 'monthly') {
-      const monthlyParcels = await LandParcel.countDocuments({
+      // Get actual monthly parcels with details
+      const monthlyParcels = await LandParcel.find({
         createdAt: { $gte: startOfMonth }
-      });
-      const monthlyTransfers = await Transfer.countDocuments({
+      })
+      .populate('currentOwner', 'fullName nationalId phoneNumber')
+      .sort({ createdAt: -1 })
+      .limit(100);
+      
+      const monthlyTransfers = await Transfer.find({
         createdAt: { $gte: startOfMonth }
-      });
-      reportData = `Parcels Registered This Month: ${monthlyParcels}\\nTransfers This Month: ${monthlyTransfers}`;
+      })
+      .populate('landParcel', 'parcelNumber')
+      .populate('previousOwner', 'fullName')
+      .populate('newOwner', 'fullName')
+      .sort({ createdAt: -1 })
+      .limit(100);
+      
+      reportContent = `MONTHLY SUMMARY (${new Date().toLocaleDateString('en-KE', { month: 'long', year: 'numeric' })})\\n\\n`;
+      reportContent += `PARCELS REGISTERED THIS MONTH: ${monthlyParcels.length}\\n\\n`;
+      
+      if (monthlyParcels.length > 0) {
+        reportContent += String('No.').padEnd(5);
+        reportContent += String('Parcel Number').padEnd(20);
+        reportContent += String('Owner Name').padEnd(25);
+        reportContent += String('National ID').padEnd(12);
+        reportContent += String('County').padEnd(15);
+        reportContent += String('Size').padEnd(10);
+        reportContent += `\\n${'-'.repeat(95)}\\n`;
+        
+        monthlyParcels.forEach((p, idx) => {
+          reportContent += String(idx + 1).padEnd(5);
+          reportContent += String(p.parcelNumber || 'N/A').substring(0, 19).padEnd(20);
+          reportContent += String(p.currentOwner?.fullName || 'N/A').substring(0, 24).padEnd(25);
+          reportContent += String(p.currentOwner?.nationalId || 'N/A').padEnd(12);
+          reportContent += String(p.location?.county || 'N/A').substring(0, 14).padEnd(15);
+          reportContent += String((p.sizeInAcres || 0) + ' ac').padEnd(10);
+          reportContent += `\\n`;
+        });
+      }
+      
+      reportContent += `\\n\\nTRANSFERS THIS MONTH: ${monthlyTransfers.length}\\n\\n`;
+      
+      if (monthlyTransfers.length > 0) {
+        reportContent += String('No.').padEnd(5);
+        reportContent += String('Parcel').padEnd(20);
+        reportContent += String('From Owner').padEnd(22);
+        reportContent += String('To Owner').padEnd(22);
+        reportContent += String('Status').padEnd(12);
+        reportContent += `\\n${'-'.repeat(95)}\\n`;
+        
+        monthlyTransfers.forEach((t, idx) => {
+          reportContent += String(idx + 1).padEnd(5);
+          reportContent += String(t.landParcel?.parcelNumber || 'N/A').substring(0, 19).padEnd(20);
+          reportContent += String(t.previousOwner?.fullName || 'N/A').substring(0, 21).padEnd(22);
+          reportContent += String(t.newOwner?.fullName || 'N/A').substring(0, 21).padEnd(22);
+          reportContent += String(t.status || 'pending').substring(0, 11).padEnd(12);
+          reportContent += `\\n`;
+        });
+      }
+      
     } else if (type === 'revenue') {
-      const totalTransfers = await Transfer.countDocuments();
-      const approvedTransfers = await Transfer.countDocuments({ status: 'approved' });
-      reportData = `Total Transfers: ${totalTransfers}\\nApproved Transfers: ${approvedTransfers}`;
+      // Get all transfers with amounts
+      const allTransfers = await Transfer.find()
+        .populate('landParcel', 'parcelNumber location')
+        .populate('previousOwner', 'fullName')
+        .populate('newOwner', 'fullName')
+        .sort({ createdAt: -1 })
+        .limit(100);
+      
+      const totalRevenue = allTransfers.reduce((sum, t) => sum + (t.transferAmount || 0), 0);
+      const approvedTransfers = allTransfers.filter(t => t.status === 'approved');
+      const approvedRevenue = approvedTransfers.reduce((sum, t) => sum + (t.transferAmount || 0), 0);
+      
+      reportContent = `LAND REVENUE REPORT\\n\\n`;
+      reportContent += `Total Transfers: ${allTransfers.length}\\n`;
+      reportContent += `Approved Transfers: ${approvedTransfers.length}\\n`;
+      reportContent += `Total Revenue: KSh ${totalRevenue.toLocaleString()}\\n`;
+      reportContent += `Approved Revenue: KSh ${approvedRevenue.toLocaleString()}\\n\\n`;
+      
+      reportContent += `RECENT TRANSFERS:\\n\\n`;
+      reportContent += String('No.').padEnd(5);
+      reportContent += String('Parcel').padEnd(18);
+      reportContent += String('From').padEnd(18);
+      reportContent += String('To').padEnd(18);
+      reportContent += String('Amount').padEnd(15);
+      reportContent += String('Status').padEnd(12);
+      reportContent += `\\n${'-'.repeat(95)}\\n`;
+      
+      allTransfers.slice(0, 50).forEach((t, idx) => {
+        reportContent += String(idx + 1).padEnd(5);
+        reportContent += String(t.landParcel?.parcelNumber || 'N/A').substring(0, 17).padEnd(18);
+        reportContent += String(t.previousOwner?.fullName || 'N/A').substring(0, 17).padEnd(18);
+        reportContent += String(t.newOwner?.fullName || 'N/A').substring(0, 17).padEnd(18);
+        reportContent += String('KSh ' + (t.transferAmount || 0).toLocaleString()).substring(0, 14).padEnd(15);
+        reportContent += String(t.status || 'pending').substring(0, 11).padEnd(12);
+        reportContent += `\\n`;
+      });
     }
     
-    // Create a simple valid PDF with report content
-    const pdfContent = `%PDF-1.4
-1 0 obj
-<< /Type /Catalog /Pages 2 0 R >>
-endobj
-2 0 obj
-<< /Type /Pages /Kids [3 0 R] /Count 1 >>
-endobj
-3 0 obj
-<< /Type /Page /Parent 2 0 R /Resources 4 0 R /MediaBox [0 0 612 792] /Contents 5 0 R >>
-endobj
-4 0 obj
-<< /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> /F2 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> >> >>
-endobj
-5 0 obj
-<< /Length 400 >>
-stream
-BT
-/F2 24 Tf
-50 750 Td
-(Ministry of Lands & Physical Planning) Tj
-0 -30 Td
-/F2 18 Tf
-(${reportTitle}) Tj
-0 -50 Td
-/F1 12 Tf
-(Generated: ${today.toLocaleString('en-KE')}) Tj
-0 -30 Td
-(Generated By: ${req.user?.fullName || 'System Administrator'}) Tj
-0 -50 Td
-/F2 14 Tf
-(Report Summary:) Tj
-0 -30 Td
-/F1 11 Tf
-(${reportData}) Tj
-0 -50 Td
-(This is a system-generated report from the) Tj
-0 -20 Td
-(Kenya Land Registry Management System.) Tj
-ET
-endstream
-endobj
-xref
-0 6
-0000000000 65535 f
-0000000009 00000 n
-0000000058 00000 n
-0000000115 00000 n
-0000000214 00000 n
-0000000366 00000 n
-trailer
-<< /Size 6 /Root 1 0 R >>
-startxref
-817
-%%EOF`;
+    const pdfContent = await generatePDFContent(reportTitle, reportContent, {
+      startDate: type === 'monthly' ? startOfMonth : null,
+      endDate: today,
+      generatedBy: req.user?.fullName || 'System Administrator'
+    });
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
-    res.send(Buffer.from(pdfContent));
+    res.send(pdfContent);
   } catch (error) {
     next(error);
   }

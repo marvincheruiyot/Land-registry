@@ -45,6 +45,12 @@ const routes = [
     meta: { requiresAuth: false }
   },
   {
+    path: '/map',
+    name: 'MapView',
+    component: () => import('@/views/MapView.vue'),
+    meta: { requiresAuth: true, roles: ['Land_Officer', 'Administrator'] }
+  },
+  {
     path: '/admindashboard',
     name: 'Dashboard',
     component: () => import('@/views/DashboardPage.vue'),
@@ -194,10 +200,28 @@ router.beforeEach((to, from, next) => {
 
   const requiresAuth = to.meta.requiresAuth
   const isAuthenticated = authStore.isAuthenticated
+  const requiredRoles = to.meta.roles
 
   if (requiresAuth && !isAuthenticated) {
     // Redirect to login with a return URL
     return next({ name: 'Login', query: { redirect: to.fullPath } })
+  }
+
+  // Check role-based access
+  if (requiredRoles && requiredRoles.length > 0) {
+    const userRole = authStore.user?.role
+    if (!userRole || !requiredRoles.includes(userRole)) {
+      // Redirect to appropriate dashboard based on role
+      if (userRole === 'Land_Owner') {
+        return next({ name: 'UserDashboard' })
+      } else if (userRole === 'Land_Officer') {
+        return next({ name: 'OfficerDashboard' })
+      } else if (userRole === 'Administrator') {
+        return next({ name: 'Dashboard' })
+      } else {
+        return next({ name: 'Home' })
+      }
+    }
   }
 
   // Allow access to login and register pages even when authenticated

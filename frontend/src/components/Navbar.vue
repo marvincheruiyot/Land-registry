@@ -69,6 +69,11 @@
               <span>Land Parcels</span>
             </router-link>
 
+            <router-link to="/map" class="sidebar-nav-item text-decoration-none" active-class="active">
+              <i class="bi bi-globe-americas"></i>
+              <span>Map View</span>
+            </router-link>
+
             <router-link to="/transfers" class="sidebar-nav-item text-decoration-none" active-class="active">
               <i class="bi bi-arrow-left-right"></i>
               <span>Transfers</span>

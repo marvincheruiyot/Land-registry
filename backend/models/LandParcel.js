@@ -132,6 +132,19 @@ const landParcelSchema = new mongoose.Schema({
     east: String,
     west: String
   },
+  boundaryCoordinates: [{
+    latitude: {
+      type: Number,
+      min: [-4.68, 'Latitude must be within Kenya boundaries'],
+      max: [5.03, 'Latitude must be within Kenya boundaries']
+    },
+    longitude: {
+      type: Number,
+      min: [33.89, 'Longitude must be within Kenya boundaries'],
+      max: [41.86, 'Longitude must be within Kenya boundaries']
+    }
+  }],
+  areaInSquareMeters: Number,
   surveyDate: Date,
   notes: String
 }, {

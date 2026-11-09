@@ -175,8 +175,22 @@
                   </select>
                 </div>
 
+                <div class="col-12">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <label class="form-label fw-semibold text-dark mb-0">GPS Coordinates (Optional)</label>
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-primary"
+                      @click="openMapPicker"
+                    >
+                      <i class="bi bi-pin-map-fill me-1"></i>
+                      Pick on Map
+                    </button>
+                  </div>
+                </div>
+
                 <div class="col-md-6">
-                  <label class="form-label fw-semibold text-dark">GPS Latitude (Optional)</label>
+                  <label class="form-label small text-muted">Latitude</label>
                   <input
                     v-model.number="form.location.coordinates.latitude"
                     type="number"
@@ -187,7 +201,7 @@
                 </div>
 
                 <div class="col-md-6">
-                  <label class="form-label fw-semibold text-dark">GPS Longitude (Optional)</label>
+                  <label class="form-label small text-muted">Longitude</label>
                   <input
                     v-model.number="form.location.coordinates.longitude"
                     type="number"
@@ -195,6 +209,13 @@
                     class="form-control rounded-pill py-2 bg-light border-0"
                     placeholder="e.g. 36.817223"
                   />
+                </div>
+                
+                <div class="col-12" v-if="form.location.coordinates.latitude && form.location.coordinates.longitude">
+                  <div class="p-2 bg-success-subtle rounded-3 small text-success">
+                    <i class="bi bi-check-circle me-1"></i>
+                    Location set: {{ form.location.coordinates.latitude.toFixed(6) }}, {{ form.location.coordinates.longitude.toFixed(6) }}
+                  </div>
                 </div>
               </div>
 
@@ -252,6 +273,15 @@
         </div>
       </div>
     </main>
+
+    <!-- Map Picker Modal -->
+    <MapPicker
+      :isOpen="showMapPicker"
+      :initialLat="form.location.coordinates.latitude"
+      :initialLng="form.location.coordinates.longitude"
+      @close="showMapPicker = false"
+      @select="handleLocationSelect"
+    />
   </div>
 </template>
 
@@ -259,16 +289,18 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Navbar from '@/components/Navbar.vue'
+import MapPicker from '@/components/MapPicker.vue'
 import api from '@/services/api'
 
 export default {
   name: 'CreateParcel',
-  components: { Navbar },
+  components: { Navbar, MapPicker },
   setup() {
     const router = useRouter()
     const loading = ref(false)
     const error = ref(null)
     const success = ref(null)
+    const showMapPicker = ref(false)
 
     // Kenyan Counties
     const counties = [
@@ -395,8 +427,8 @@ export default {
         ward: '',
         description: '',
         coordinates: {
-          latitude: -1.286389,
-          longitude: 36.817223
+          latitude: null,
+          longitude: null
         }
       },
       ownerNationalId: '',
@@ -425,6 +457,15 @@ export default {
       }
     }
 
+    const openMapPicker = () => {
+      showMapPicker.value = true
+    }
+
+    const handleLocationSelect = (coordinates) => {
+      form.value.location.coordinates.latitude = parseFloat(coordinates.latitude.toFixed(6))
+      form.value.location.coordinates.longitude = parseFloat(coordinates.longitude.toFixed(6))
+    }
+
     const handleSubmit = async () => {
       loading.value = true
       error.value = null
@@ -451,6 +492,7 @@ export default {
       loading,
       error,
       success,
+      showMapPicker,
       counties,
       availableSubCounties,
       availableWards,
@@ -458,6 +500,8 @@ export default {
       onSubCountyChange,
       onOwnershipTypeChange,
       getOwnershipLabel,
+      openMapPicker,
+      handleLocationSelect,
       handleSubmit
     }
   }
