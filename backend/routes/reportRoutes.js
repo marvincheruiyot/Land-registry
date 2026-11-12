@@ -7,6 +7,7 @@ router.post('/generate', protect, authorize('Land_Officer', 'Administrator'), re
 router.post('/today-activity', protect, authorize('Land_Officer', 'Administrator'), reportController.generateTodayActivity);
 router.get('/', protect, authorize('Land_Officer', 'Administrator'), reportController.getReports);
 router.get('/statistics', protect, authorize('Land_Officer', 'Administrator'), reportController.getStatistics);
+router.get('/analytics', protect, authorize('Land_Officer', 'Administrator'), reportController.getAnalytics);
 router.get('/detailed', protect, authorize('Land_Officer', 'Administrator'), reportController.getDetailedData);
 router.get('/quick/:type', protect, authorize('Land_Officer', 'Administrator'), reportController.downloadQuickReport);
 router.get('/:id/download', protect, authorize('Land_Officer', 'Administrator'), reportController.downloadReport);

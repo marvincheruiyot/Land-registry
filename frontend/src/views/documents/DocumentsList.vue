@@ -525,7 +525,8 @@ export default {
     const fetchOwnerParcels = async (ownerId) => {
       loadingParcels.value = true
       try {
-        const response = await api.get('/parcels')
+        // Request all parcels for document association
+        const response = await api.get('/parcels?limit=1000')
         if (response.data?.data?.parcels) {
           // Filter for this owner's parcels
           ownerParcels.value = response.data.data.parcels.filter(p => 

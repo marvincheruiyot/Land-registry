@@ -202,6 +202,46 @@
                 <small class="text-muted">Choose the reason for this transfer</small>
               </div>
 
+              <div v-if="transferForm.transferType === 'sale'" class="mb-3">
+                <label class="form-label fw-semibold text-dark">
+                  <i class="bi bi-cash-stack me-1"></i>Sale Amount (KSh) *
+                </label>
+                <input 
+                  v-model.number="transferForm.amount" 
+                  type="number" 
+                  class="form-control rounded-3 py-2" 
+                  placeholder="e.g., 5000000" 
+                  min="0"
+                  step="1000"
+                  :required="transferForm.transferType === 'sale'"
+                >
+                <small class="text-muted">Enter the purchase price in Kenya Shillings for stamp duty calculation</small>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-semibold text-dark">
+                  <i class="bi bi-file-earmark-pdf me-1"></i>Upload Consent Documents *
+                </label>
+                <input 
+                  type="file" 
+                  class="form-control rounded-3 py-2" 
+                  @change="handleFileUpload"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  multiple
+                  required
+                >
+                <small class="text-muted">Upload consent letters, sale agreements, or other supporting documents (PDF, JPG, PNG)</small>
+                <div v-if="transferForm.files && transferForm.files.length > 0" class="mt-2">
+                  <div v-for="(file, index) in transferForm.files" :key="index" class="d-flex align-items-center gap-2 small text-success">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <span>{{ file.name }} ({{ formatFileSize(file.size) }})</span>
+                    <button type="button" class="btn btn-sm btn-link text-danger p-0" @click="removeFile(index)">
+                      <i class="bi bi-x-circle"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <div class="mb-3">
                 <label class="form-label fw-semibold text-dark">
                   <i class="bi bi-pencil me-1"></i>Additional Notes (Optional)
@@ -274,7 +314,9 @@ export default {
       parcelId: '',
       newOwnerId: '',
       transferType: '',
-      notes: ''
+      amount: null,
+      notes: '',
+      files: []
     })
     const transferLoading = ref(false)
     const transferError = ref(null)
@@ -320,6 +362,23 @@ export default {
       }
     }
 
+    const handleFileUpload = (event) => {
+      const files = Array.from(event.target.files)
+      transferForm.value.files = files
+    }
+
+    const removeFile = (index) => {
+      transferForm.value.files.splice(index, 1)
+    }
+
+    const formatFileSize = (bytes) => {
+      if (bytes === 0) return '0 Bytes'
+      const k = 1024
+      const sizes = ['Bytes', 'KB', 'MB', 'GB']
+      const i = Math.floor(Math.log(bytes) / Math.log(k))
+      return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+    }
+
     const submitTransfer = async () => {
       transferLoading.value = true
       transferError.value = null
@@ -337,11 +396,27 @@ export default {
           return;
         }
 
-        await api.post('/transfers', {
-          landParcel: parcelId,
-          newOwnerNationalId: transferForm.value.newOwnerId,
-          transferType: transferForm.value.transferType,
-          notes: transferForm.value.notes || ''
+        // Create FormData for file upload
+        const formData = new FormData()
+        formData.append('landParcel', parcelId)
+        formData.append('newOwnerNationalId', transferForm.value.newOwnerId)
+        formData.append('transferType', transferForm.value.transferType)
+        if (transferForm.value.amount) {
+          formData.append('transferAmount', transferForm.value.amount)
+        }
+        formData.append('notes', transferForm.value.notes || '')
+        
+        // Append files
+        if (transferForm.value.files && transferForm.value.files.length > 0) {
+          transferForm.value.files.forEach((file) => {
+            formData.append('documents', file)
+          })
+        }
+
+        await api.post('/transfers', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
         })
 
         transferSuccess.value = 'Transfer request submitted successfully! Land officers have been notified.'
@@ -365,7 +440,9 @@ export default {
         parcelId: '',
         newOwnerId: '',
         transferType: '',
-        notes: ''
+        amount: null,
+        notes: '',
+        files: []
       }
       transferError.value = null
       transferSuccess.value = null
@@ -412,6 +489,9 @@ export default {
       transferLoading,
       transferError,
       transferSuccess,
+      handleFileUpload,
+      removeFile,
+      formatFileSize,
       filterTransfers,
       submitTransfer,
       closeTransferModal,

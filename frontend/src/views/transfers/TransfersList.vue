@@ -29,6 +29,49 @@
         </button>
       </div>
 
+      <!-- Important Notice for Officers -->
+      <div v-if="canApprove && hasPendingTransfers" class="alert alert-warning d-flex align-items-start rounded-4 mb-4">
+        <i class="bi bi-exclamation-triangle-fill me-3 fs-4"></i>
+        <div class="flex-grow-1">
+          <h6 class="fw-bold mb-2">⚠️ Important: Document Verification Required</h6>
+          <p class="mb-2 small">
+            Before approving any transfer, you must first review and approve all supporting documents 
+            (consent letters, sale agreements, etc.) uploaded by the land owner.
+          </p>
+          <div class="d-flex gap-2">
+            <router-link to="/documents" class="btn btn-sm btn-warning">
+              <i class="bi bi-file-earmark-check me-1"></i>
+              Go to Documents for Approval
+            </router-link>
+            <a href="#workflow" class="btn btn-sm btn-outline-warning" @click.prevent="showWorkflow = !showWorkflow">
+              <i class="bi bi-info-circle me-1"></i>
+              {{ showWorkflow ? 'Hide' : 'View' }} Approval Workflow
+            </a>
+          </div>
+          <div v-if="showWorkflow" class="mt-3 p-3 bg-white rounded-3 border border-warning">
+            <h6 class="fw-bold small text-dark mb-2">Transfer Approval Workflow:</h6>
+            <ol class="small mb-0 ps-3">
+              <li class="mb-1">
+                <strong>Step 1:</strong> Navigate to 
+                <router-link to="/documents" class="text-decoration-none">Documents page</router-link>
+              </li>
+              <li class="mb-1">
+                <strong>Step 2:</strong> Review transfer consent documents (check authenticity, signatures, etc.)
+              </li>
+              <li class="mb-1">
+                <strong>Step 3:</strong> Approve or reject each document
+              </li>
+              <li class="mb-1">
+                <strong>Step 4:</strong> Once all documents are approved, return here to approve the transfer
+              </li>
+              <li>
+                <strong>Step 5:</strong> Click "Approve" button to complete the transfer
+              </li>
+            </ol>
+          </div>
+        </div>
+      </div>
+
       <!-- Content Area -->
       <div class="dash-card">
         <div v-if="loading" class="text-center py-5">
@@ -67,6 +110,10 @@
                     </span>
                     <span class="badge bg-secondary-subtle text-dark rounded-pill px-2 py-1 small">
                       {{ t.transferType || 'Conveyance' }}
+                    </span>
+                    <span v-if="t.documents && t.documents.length > 0" class="badge bg-danger rounded-pill px-2 py-1 small">
+                      <i class="bi bi-paperclip me-1"></i>
+                      {{ t.documents.length }} {{ t.documents.length === 1 ? 'Document' : 'Documents' }}
                     </span>
                   </div>
 
@@ -132,6 +179,7 @@ export default {
     const transfers = ref([])
     const loading = ref(false)
     const filterStatus = ref('all')
+    const showWorkflow = ref(false)
 
     const statusTabs = [
       { label: 'All Transfers', value: 'all' },
@@ -141,7 +189,11 @@ export default {
     ]
 
     const canApprove = computed(() => {
-      return authStore.isLandOfficer
+      return authStore.isLandOfficer || authStore.isAdministrator
+    })
+
+    const hasPendingTransfers = computed(() => {
+      return transfers.value.some(t => t.status === 'pending')
     })
 
     const getStatusBadge = (status) => {
@@ -234,8 +286,10 @@ export default {
       transfers,
       loading,
       filterStatus,
+      showWorkflow,
       statusTabs,
       canApprove,
+      hasPendingTransfers,
       getStatusBadge,
       loadTransfers,
       approveTransfer,

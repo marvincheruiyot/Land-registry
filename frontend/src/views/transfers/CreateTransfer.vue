@@ -56,14 +56,17 @@
                 </div>
 
                 <div v-if="form.transferType === 'sale'" class="col-12">
-                  <label class="form-label fw-semibold text-dark">Transfer Price / Valuation (KSh)</label>
+                  <label class="form-label fw-semibold text-dark">Sale Amount (KSh) *</label>
                   <input
                     v-model.number="form.transferAmount"
                     type="number"
                     class="form-control rounded-pill py-2 bg-light border-0"
                     placeholder="e.g., 6500000"
+                    min="0"
+                    step="1000"
+                    required
                   />
-                  <small class="text-muted">Will be used to compute government stamp duty assessment.</small>
+                  <small class="text-muted">Enter the purchase price in Kenya Shillings. This will be used to compute stamp duty.</small>
                 </div>
 
                 <div class="col-12">
@@ -145,7 +148,8 @@ export default {
 
     const loadParcels = async () => {
       try {
-        const response = await api.get('/parcels')
+        // Request all parcels for transfer creation
+        const response = await api.get('/parcels?limit=1000')
         parcels.value = response.data?.data?.parcels || response.data?.parcels || [
           { id: 'p-1', parcelNumber: 'NAI/KIL/2026/04', county: 'Nairobi', size: 0.75 },
           { id: 'p-2', parcelNumber: 'MSA/NYA/1042', county: 'Mombasa', size: 2.1 }

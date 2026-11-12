@@ -474,7 +474,8 @@ export default {
 
     const fetchUserParcels = async () => {
       try {
-        const response = await api.get('/parcels')
+        // Request all user's parcels
+        const response = await api.get('/parcels?limit=1000')
         if (response.data?.data?.parcels) {
           // Filter for user's own parcels
           userParcels.value = response.data.data.parcels.filter(p => 

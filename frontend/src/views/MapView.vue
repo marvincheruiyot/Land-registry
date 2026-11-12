@@ -159,14 +159,26 @@ export default {
     const kenyaCenter = { lat: -1.286389, lng: 36.817223 }
 
     const filteredParcels = computed(() => {
-      if (!searchQuery.value) return parcels.value
+      if (!searchQuery.value || searchQuery.value.trim() === '') {
+        return parcels.value
+      }
       
-      const query = searchQuery.value.toLowerCase()
-      return parcels.value.filter(p => 
-        p.parcelNumber?.toLowerCase().includes(query) ||
-        p.location?.county?.toLowerCase().includes(query) ||
-        p.location?.subCounty?.toLowerCase().includes(query)
-      )
+      const query = searchQuery.value.toLowerCase().trim()
+      const filtered = parcels.value.filter(p => {
+        const parcelNum = (p.parcelNumber || '').toLowerCase()
+        const county = (p.location?.county || '').toLowerCase()
+        const subCounty = (p.location?.subCounty || '').toLowerCase()
+        
+        return parcelNum.includes(query) || 
+               county.includes(query) || 
+               subCounty.includes(query)
+      })
+      
+      console.log('Search query:', query)
+      console.log('Total parcels:', parcels.value.length)
+      console.log('Filtered parcels:', filtered.length)
+      
+      return filtered
     })
 
     const parcelsWithCoordinates = computed(() => {
@@ -224,11 +236,18 @@ export default {
     const loadParcels = async () => {
       loading.value = true
       try {
-        const response = await api.get('/parcels')
-        parcels.value = response.data?.data?.parcels || []
+        // Request all parcels without pagination limit
+        const response = await api.get('/parcels?limit=1000')
+        const fetchedParcels = response.data?.data?.parcels || []
+        
+        console.log('Loaded parcels:', fetchedParcels.length)
+        console.log('Sample parcel:', fetchedParcels[0])
+        
+        parcels.value = fetchedParcels
         addMarkersToMap()
       } catch (error) {
         console.error('Error loading parcels:', error)
+        parcels.value = [] // Ensure parcels is at least an empty array on error
       } finally {
         loading.value = false
       }

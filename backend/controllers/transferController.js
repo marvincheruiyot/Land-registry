@@ -37,6 +37,36 @@ exports.initiateTransfer = async (req, res, next) => {
       });
     }
 
+    // Handle uploaded documents
+    const documentIds = [];
+    if (req.files && req.files.length > 0) {
+      const crypto = require('crypto');
+      
+      for (const file of req.files) {
+        // Calculate checksum
+        const fileBuffer = require('fs').readFileSync(file.path);
+        const checksum = crypto.createHash('sha256').update(fileBuffer).digest('hex');
+        
+        const document = await Document.create({
+          documentType: 'transfer_agreement',
+          fileName: file.filename,
+          originalName: file.originalname,
+          filePath: file.path,
+          fileSize: file.size,
+          mimeType: file.mimetype,
+          checksum: checksum,
+          uploadedBy: req.user._id,
+          relatedEntity: {
+            entityType: 'LandParcel',
+            entityId: landParcel
+          },
+          description: `Transfer consent document for ${parcel.parcelNumber}`,
+          isEncrypted: false
+        });
+        documentIds.push(document._id);
+      }
+    }
+
     const transfer = await Transfer.create({
       landParcel,
       previousOwner: parcel.currentOwner,
@@ -44,7 +74,8 @@ exports.initiateTransfer = async (req, res, next) => {
       initiatedBy: req.user._id,
       transferType: transferType || 'sale',
       transferAmount: Number(transferAmount) || 0,
-      approvalNotes: notes || ''
+      approvalNotes: notes || '',
+      documents: documentIds
     });
 
     // Update parcel status to pending_transfer
@@ -61,7 +92,7 @@ exports.initiateTransfer = async (req, res, next) => {
         recipient: user._id,
         type: 'TRANSFER_INITIATED',
         title: 'New Transfer Request',
-        message: `Transfer request for parcel ${parcel.parcelNumber}. From: ${req.user.fullName} to ${newOwner.fullName}. Type: ${transferType}. Awaiting your approval.`,
+        message: `Transfer request for parcel ${parcel.parcelNumber}. From: ${req.user.fullName} to ${newOwner.fullName}. Type: ${transferType}. ${documentIds.length} document(s) attached. Awaiting your approval.`,
         relatedEntity: {
           entityType: 'Transfer',
           entityId: transfer._id
@@ -95,6 +126,8 @@ exports.initiateTransfer = async (req, res, next) => {
         parcelNumber: parcel.parcelNumber,
         location: parcel.location,
         transferType: transferType || 'sale',
+        transferAmount: Number(transferAmount) || 0,
+        documentsCount: documentIds.length,
         previousOwner: req.user.fullName,
         previousOwnerNationalId: req.user.nationalId,
         newOwner: newOwner.fullName,
@@ -139,6 +172,7 @@ exports.getAllTransfers = async (req, res, next) => {
       .populate('previousOwner', 'fullName nationalId email')
       .populate('newOwner', 'fullName nationalId email')
       .populate('processedBy', 'fullName')
+      .populate('documents', 'fileName filePath fileSize mimeType documentType createdAt')
       .sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -157,7 +191,8 @@ exports.getTransferById = async (req, res, next) => {
       .populate('landParcel')
       .populate('previousOwner', 'fullName email nationalId phoneNumber')
       .populate('newOwner', 'fullName email nationalId phoneNumber')
-      .populate('processedBy', 'fullName role');
+      .populate('processedBy', 'fullName role')
+      .populate('documents', 'fileName filePath fileSize mimeType documentType createdAt uploadedBy');
 
     if (!transfer) {
       return res.status(404).json({
@@ -523,6 +558,20 @@ exports.cancelTransfer = async (req, res, next) => {
     res.status(200).json({
       status: 'success',
       message: 'Transfer cancelled.'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Get count of pending transfers
+exports.getPendingTransfersCount = async (req, res, next) => {
+  try {
+    const count = await Transfer.countDocuments({ status: 'pending' });
+    
+    res.status(200).json({
+      status: 'success',
+      data: { count }
     });
   } catch (error) {
     next(error);

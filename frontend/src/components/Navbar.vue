@@ -41,14 +41,16 @@
               <span>My Land Parcels</span>
             </router-link>
 
-            <router-link to="/my-transfers" class="sidebar-nav-item text-decoration-none" active-class="active">
+            <router-link to="/my-transfers" class="sidebar-nav-item text-decoration-none position-relative" active-class="active">
               <i class="bi bi-arrow-left-right"></i>
               <span>My Transfers</span>
+              <span v-if="pendingTransfersCount > 0" class="badge bg-warning rounded-pill ms-auto">{{ pendingTransfersCount }}</span>
             </router-link>
 
-            <router-link to="/my-documents" class="sidebar-nav-item text-decoration-none" active-class="active">
+            <router-link to="/my-documents" class="sidebar-nav-item text-decoration-none position-relative" active-class="active">
               <i class="bi bi-file-earmark-text-fill"></i>
               <span>My Documents</span>
+              <span v-if="pendingDocumentsCount > 0" class="badge bg-warning rounded-pill ms-auto">{{ pendingDocumentsCount }}</span>
             </router-link>
 
             <router-link to="/verify" class="sidebar-nav-item text-decoration-none" active-class="active">
@@ -74,14 +76,16 @@
               <span>Map View</span>
             </router-link>
 
-            <router-link to="/transfers" class="sidebar-nav-item text-decoration-none" active-class="active">
+            <router-link to="/transfers" class="sidebar-nav-item text-decoration-none position-relative" active-class="active">
               <i class="bi bi-arrow-left-right"></i>
               <span>Transfers</span>
+              <span v-if="pendingTransfersCount > 0" class="badge bg-danger rounded-pill ms-auto">{{ pendingTransfersCount }}</span>
             </router-link>
 
-            <router-link to="/documents" class="sidebar-nav-item text-decoration-none" active-class="active">
+            <router-link to="/documents" class="sidebar-nav-item text-decoration-none position-relative" active-class="active">
               <i class="bi bi-file-earmark-text-fill"></i>
               <span>Documents</span>
+              <span v-if="pendingDocumentsCount > 0" class="badge bg-danger rounded-pill ms-auto">{{ pendingDocumentsCount }}</span>
             </router-link>
 
             <router-link to="/verify" class="sidebar-nav-item text-decoration-none" active-class="active">
@@ -355,6 +359,10 @@ export default {
     const isLandOfficer = computed(() => authStore.isLandOfficer)
     const isAdministrator = computed(() => authStore.isAdministrator)
     const isLandOwner = computed(() => authStore.isLandOwner)
+    
+    // Notification counts for sidebar badges
+    const pendingTransfersCount = ref(0)
+    const pendingDocumentsCount = ref(0)
 
     // Computed property for dashboard route based on user role
     const dashboardRoute = computed(() => {
@@ -419,6 +427,28 @@ export default {
         }
       } finally {
         loading.value = false
+      }
+    }
+    
+    const fetchPendingCounts = async () => {
+      try {
+        // Fetch pending transfers count
+        const transfersResponse = await api.get('/transfers/count/pending')
+        if (transfersResponse.data?.data?.count !== undefined) {
+          pendingTransfersCount.value = transfersResponse.data.data.count
+        }
+      } catch (err) {
+        console.error('Error fetching pending transfers count:', err)
+      }
+      
+      try {
+        // Fetch pending documents count
+        const documentsResponse = await api.get('/documents/count/pending')
+        if (documentsResponse.data?.data?.count !== undefined) {
+          pendingDocumentsCount.value = documentsResponse.data.data.count
+        }
+      } catch (err) {
+        console.error('Error fetching pending documents count:', err)
       }
     }
 
@@ -601,6 +631,13 @@ export default {
         fetchNotifications()
         // Refresh notifications every 30 seconds
         setInterval(fetchNotifications, 30000)
+        
+        // Fetch pending counts for officers/admins
+        if (isLandOfficer.value || isAdministrator.value) {
+          fetchPendingCounts()
+          // Refresh counts every 30 seconds
+          setInterval(fetchPendingCounts, 30000)
+        }
       }
       
       // Update time immediately and then every second
@@ -618,6 +655,8 @@ export default {
       notifications,
       unreadCount,
       loading,
+      pendingTransfersCount,
+      pendingDocumentsCount,
       formatRole,
       currentDate,
       currentTime,
@@ -852,3 +891,28 @@ export default {
   background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
 }
 </style>
+
+
+/* Notification badge in sidebar */
+.sidebar-nav-item .badge {
+  font-size: 0.65rem;
+  padding: 0.25rem 0.5rem;
+  font-weight: 700;
+  animation: pulse-badge 2s infinite;
+}
+
+@keyframes pulse-badge {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.sidebar-land-owner .sidebar-nav-item .badge {
+  background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+  color: #212529;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(255, 193, 7, 0.4);
+}

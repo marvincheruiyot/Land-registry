@@ -243,6 +243,21 @@ function generateCSV(type, data) {
       });
       break;
       
+    case 'verification_statistics':
+      // CSV header
+      csv = 'No.,Action,Performed By,Role,Entity Type,Date\n';
+      
+      // CSV rows
+      data.forEach((item, idx) => {
+        csv += `${idx + 1},`;
+        csv += `"${item.action || 'N/A'}",`;
+        csv += `"${item.performedBy?.fullName || 'System'}",`;
+        csv += `"${item.performedBy?.role || 'N/A'}",`;
+        csv += `"${item.targetModel || 'N/A'}",`;
+        csv += `"${new Date(item.createdAt).toLocaleString('en-KE')}"\n`;
+      });
+      break;
+      
     case 'pending_requests':
       // CSV header
       csv = 'No.,Parcel Number,Location,Previous Owner,New Owner,Type,Days Pending,Submitted Date\n';
@@ -257,6 +272,22 @@ function generateCSV(type, data) {
         csv += `"${item.type}",`;
         csv += `${item.daysPending},`;
         csv += `"${item.date}"\n`;
+      });
+      break;
+      
+    case 'system_audit':
+      // CSV header  
+      csv = 'No.,Action,Actor,Role,IP Address,Target Entity,Date\n';
+      
+      // CSV rows
+      data.forEach((item, idx) => {
+        csv += `${idx + 1},`;
+        csv += `"${item.action || 'N/A'}",`;
+        csv += `"${item.performedBy?.fullName || 'System'}",`;
+        csv += `"${item.performedBy?.role || 'N/A'}",`;
+        csv += `"${item.ipAddress || 'N/A'}",`;
+        csv += `"${item.targetModel || 'N/A'}",`;
+        csv += `"${new Date(item.createdAt).toLocaleString('en-KE')}"\n`;
       });
       break;
       
@@ -548,6 +579,38 @@ exports.generateReport = async (req, res, next) => {
         });
         break;
         
+      case 'verification_statistics':
+        const verifications = await AuditLog.find({
+          createdAt: { $gte: start, $lte: end },
+          action: { $in: ['VERIFICATION_PERFORMED', 'DEED_VERIFIED', 'DOCUMENT_VERIFIED'] }
+        }).populate('performedBy', 'fullName role').sort({ createdAt: -1 });
+        
+        reportData = verifications;
+        reportContent = `Total Verifications: ${verifications.length}\\n\\n`;
+        verifications.forEach((log, idx) => {
+          reportContent += `${idx + 1}. ${log.action}\\n`;
+          reportContent += `   By: ${log.performedBy?.fullName || 'System'} (${log.performedBy?.role || 'N/A'})\\n`;
+          reportContent += `   Entity: ${log.targetModel || 'N/A'}\\n`;
+          reportContent += `   Date: ${new Date(log.createdAt).toLocaleString('en-KE')}\\n\\n`;
+        });
+        break;
+        
+      case 'system_audit':
+        const systemAudits = await AuditLog.find({
+          createdAt: { $gte: start, $lte: end }
+        }).populate('performedBy', 'fullName role').sort({ createdAt: -1 }).limit(500);
+        
+        reportData = systemAudits;
+        reportContent = `Total Audit Entries: ${systemAudits.length}\\n\\n`;
+        systemAudits.forEach((log, idx) => {
+          reportContent += `${idx + 1}. ${log.action}\\n`;
+          reportContent += `   By: ${log.performedBy?.fullName || 'System'} (${log.performedBy?.role || 'N/A'})\\n`;
+          reportContent += `   IP: ${log.ipAddress || 'N/A'}\\n`;
+          reportContent += `   Entity: ${log.targetModel || 'N/A'}\\n`;
+          reportContent += `   Date: ${new Date(log.createdAt).toLocaleString('en-KE')}\\n\\n`;
+        });
+        break;
+        
       default:
         reportContent = 'Report type not implemented yet.';
     }
@@ -716,6 +779,106 @@ exports.getDetailedData = async (req, res, next) => {
       }
     });
   } catch (error) {
+    next(error);
+  }
+};
+
+// Get Analytics Data for Charts
+exports.getAnalytics = async (req, res, next) => {
+  try {
+    // Get date range for last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    thirtyDaysAgo.setHours(0, 0, 0, 0);
+    
+    // Get transfers by type
+    const transfersByType = await Transfer.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: thirtyDaysAgo }
+        }
+      },
+      {
+        $group: {
+          _id: '$transferType',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+    
+    const transfersTypeMap = {};
+    transfersByType.forEach(item => {
+      transfersTypeMap[item._id || 'sale'] = item.count;
+    });
+    
+    // Get transfers by status
+    const transfersByStatus = await Transfer.aggregate([
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+    
+    const transfersStatusMap = {};
+    transfersByStatus.forEach(item => {
+      transfersStatusMap[item._id || 'pending'] = item.count;
+    });
+    
+    // Get registrations over last 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+    
+    const registrationsOverTime = await LandParcel.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: sevenDaysAgo }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: '%Y-%m-%d', date: '$createdAt' }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { _id: 1 }
+      }
+    ]);
+    
+    // Format registrations data
+    const registrationsData = registrationsOverTime.map(item => ({
+      date: new Date(item._id).toLocaleDateString('en-KE', { weekday: 'short' }),
+      count: item.count
+    }));
+    
+    // Fill in missing days with 0
+    const last7Days = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dayName = date.toLocaleDateString('en-KE', { weekday: 'short' });
+      const existingData = registrationsData.find(d => d.date === dayName);
+      last7Days.push({
+        date: dayName,
+        count: existingData ? existingData.count : 0
+      });
+    }
+    
+    res.status(200).json({
+      status: 'success',
+      data: {
+        transfersByType: transfersTypeMap,
+        transfersByStatus: transfersStatusMap,
+        registrationsOverTime: last7Days
+      }
+    });
+  } catch (error) {
+    console.error('Get analytics error:', error);
     next(error);
   }
 };

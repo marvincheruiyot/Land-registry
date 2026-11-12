@@ -630,7 +630,7 @@ export default {
 
         // Fetch parcels
         console.log('🗺️ Fetching land parcels...')
-        const parcelsRes = await api.get('/parcels')
+        const parcelsRes = await api.get('/parcels?limit=1000')
         console.log('✅ Parcels response:', parcelsRes.data)
         
         if (parcelsRes.data?.data?.parcels) {

@@ -242,7 +242,8 @@ export default {
 
     const loadParcels = async () => {
       try {
-        const response = await api.get('/parcels')
+        // Request all parcels for map view
+        const response = await api.get('/parcels?limit=1000')
         parcels.value = response.data?.data?.parcels || []
         
         // Calculate stats

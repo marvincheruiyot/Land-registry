@@ -395,3 +395,17 @@ exports.verifyDocument = async (req, res, next) => {
     next(error);
   }
 };
+
+// Get count of pending documents
+exports.getPendingDocumentsCount = async (req, res, next) => {
+  try {
+    const count = await Document.countDocuments({ verificationStatus: 'pending' });
+    
+    res.status(200).json({
+      status: 'success',
+      data: { count }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
