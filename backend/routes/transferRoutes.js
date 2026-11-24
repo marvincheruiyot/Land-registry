@@ -18,9 +18,9 @@ const upload = multer({ storage });
 router.post('/', protect, upload.array('documents', 5), transferController.initiateTransfer);
 router.get('/', protect, transferController.getAllTransfers);
 router.get('/count/pending', protect, authorize('Land_Officer', 'Administrator'), transferController.getPendingTransfersCount);
-router.get('/:id', protect, transferController.getTransferById);
 router.put('/:id/approve', protect, authorize('Land_Officer'), transferController.approveTransfer);
 router.put('/:id/reject', protect, authorize('Land_Officer'), transferController.rejectTransfer);
 router.put('/:id/cancel', protect, transferController.cancelTransfer);
+router.get('/:id', protect, transferController.getTransferById);
 
 module.exports = router;

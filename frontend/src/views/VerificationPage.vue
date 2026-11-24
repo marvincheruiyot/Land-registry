@@ -39,23 +39,30 @@
               >
                 <i class="bi bi-geo-alt-fill me-1"></i> Parcel Number
               </button>
+              <button
+                type="button"
+                @click="searchType = 'owner'"
+                :class="['btn btn-pill btn-sm', searchType === 'owner' ? 'btn-dark-pill' : 'text-muted border-0 bg-transparent']"
+              >
+                <i class="bi bi-person-badge-fill me-1"></i> Owner ID
+              </button>
             </div>
 
             <!-- Form -->
             <form @submit.prevent="handleVerify" class="mb-4">
               <div class="mb-3">
                 <label class="form-label fw-semibold text-dark">
-                  {{ searchType === 'token' ? 'Title Deed Number' : 'Official Land Parcel ID' }}
+                  {{ searchType === 'token' ? 'Title Deed Number' : searchType === 'parcel' ? 'Official Land Parcel ID' : 'National ID Number' }}
                 </label>
                 <div class="input-group">
                   <span class="input-group-text bg-light border-0 ps-3">
-                    <i :class="searchType === 'token' ? 'bi bi-file-earmark-text text-muted' : 'bi bi-geo text-muted'"></i>
+                    <i :class="searchType === 'token' ? 'bi bi-file-earmark-text text-muted' : searchType === 'parcel' ? 'bi bi-geo text-muted' : 'bi bi-person-badge text-muted'"></i>
                   </span>
                   <input
                     v-model="searchQuery"
                     type="text"
                     class="form-control bg-light border-0 py-3"
-                    :placeholder="searchType === 'token' ? 'e.g., IR/2026/0994 or title deed number' : 'e.g. NAI/KIL/2026/04'"
+                    :placeholder="searchType === 'token' ? 'e.g., IR/2026/0994 or title deed number' : searchType === 'parcel' ? 'e.g. NAI/KIL/2026/04' : 'e.g., 12345678'"
                     required
                   />
                   <button type="submit" :disabled="loading" class="btn btn-pill btn-dark-pill px-4">
@@ -66,7 +73,7 @@
                 </div>
                 <small class="text-muted d-block mt-2">
                   <i class="bi bi-info-circle me-1"></i>
-                  Data is verified in real-time against Kenya Ministry of Lands cryptographic ledger records.
+                  {{ searchType === 'owner' ? 'Verify if a person owns land by searching their National ID number.' : 'Data is verified in real-time against Kenya Ministry of Lands cryptographic ledger records.' }}
                 </small>
               </div>
             </form>
@@ -81,7 +88,7 @@
             </div>
 
             <!-- Verified Result Card (Nikitin highlighted aesthetic) -->
-            <div v-if="result" class="p-4 rounded-4 bg-light border border-2 border-success-subtle">
+            <div v-if="result && searchType !== 'owner'" class="p-4 rounded-4 bg-light border border-2 border-success-subtle">
               <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
                 <div class="d-flex align-items-center gap-3">
                   <div class="avatar-circle bg-success text-white">
@@ -123,6 +130,114 @@
                 <span class="badge bg-success-subtle text-success rounded-pill px-3 py-1">
                   Valid Certificate
                 </span>
+              </div>
+            </div>
+
+            <!-- Owner ID Verification Result (Multiple Parcels) -->
+            <div v-if="result && searchType === 'owner'" class="rounded-4 bg-light border border-2 border-success-subtle">
+              <!-- Owner Info Header -->
+              <div class="p-4 pb-3 border-bottom bg-gradient" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 1rem 1rem 0 0;">
+                <div class="d-flex align-items-center gap-3 mb-2">
+                  <div class="avatar-circle bg-white text-success" style="width: 50px; height: 50px;">
+                    <i class="bi bi-person-check-fill fs-4"></i>
+                  </div>
+                  <div class="text-white">
+                    <h5 class="fw-bold mb-0">{{ result.owner?.fullName }}</h5>
+                    <small class="opacity-90">National ID: {{ result.owner?.nationalId }}</small>
+                  </div>
+                </div>
+                <div class="row g-2 mt-2">
+                  <div class="col-4 text-center">
+                    <div class="bg-white bg-opacity-25 rounded-3 p-2">
+                      <div class="fw-bold text-white fs-4">{{ result.ownership?.totalParcels || 0 }}</div>
+                      <small class="text-white opacity-90">Parcels</small>
+                    </div>
+                  </div>
+                  <div class="col-4 text-center">
+                    <div class="bg-white bg-opacity-25 rounded-3 p-2">
+                      <div class="fw-bold text-white fs-4">{{ result.ownership?.totalAcres || 0 }}</div>
+                      <small class="text-white opacity-90">Acres</small>
+                    </div>
+                  </div>
+                  <div class="col-4 text-center">
+                    <div class="bg-white bg-opacity-25 rounded-3 p-2">
+                      <div class="fw-bold text-white fs-4">{{ result.ownership?.counties?.length || 0 }}</div>
+                      <small class="text-white opacity-90">Counties</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Parcels List -->
+              <div class="p-4">
+                <h6 class="fw-bold mb-3">
+                  <i class="bi bi-map-fill me-2 text-success"></i>
+                  Registered Land Parcels ({{ result.parcels?.length || 0 }})
+                </h6>
+
+                <div v-if="result.parcels && result.parcels.length === 0" class="text-center py-4 text-muted">
+                  <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                  <p class="mb-0">No active land parcels found for this owner</p>
+                </div>
+
+                <div v-else class="table-responsive">
+                  <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                      <tr>
+                        <th class="fw-semibold small">Parcel Number</th>
+                        <th class="fw-semibold small">Location</th>
+                        <th class="fw-semibold small">Size</th>
+                        <th class="fw-semibold small">Land Use</th>
+                        <th class="fw-semibold small">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(parcel, index) in result.parcels" :key="index">
+                        <td>
+                          <div class="fw-bold small">{{ parcel.parcelNumber }}</div>
+                          <small class="text-muted">{{ parcel.titleDeedNumber || 'N/A' }}</small>
+                        </td>
+                        <td>
+                          <div class="small">{{ parcel.county }}</div>
+                          <small class="text-muted">{{ parcel.subCounty || '' }}</small>
+                        </td>
+                        <td>
+                          <span class="badge bg-light text-dark">{{ parcel.size }} acres</span>
+                        </td>
+                        <td>
+                          <small class="text-capitalize">{{ parcel.landUse || 'N/A' }}</small>
+                        </td>
+                        <td>
+                          <span :class="['badge', getStatusBadge(parcel.status)]">
+                            {{ parcel.status }}
+                          </span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div v-if="result.ownership?.counties && result.ownership.counties.length > 0" class="mt-3 pt-3 border-top">
+                  <small class="text-muted d-block mb-2">Counties with Land Holdings:</small>
+                  <div class="d-flex flex-wrap gap-2">
+                    <span 
+                      v-for="county in result.ownership.counties" 
+                      :key="county"
+                      class="badge bg-success rounded-pill px-3 py-2"
+                    >
+                      {{ county }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="mt-3 p-3 bg-white rounded-3 border d-flex justify-content-between align-items-center">
+                  <div class="small text-muted">
+                    <strong>Verified:</strong> {{ new Date().toLocaleString() }}
+                  </div>
+                  <span class="badge bg-success-subtle text-success rounded-pill px-3 py-1">
+                    Owner Verified
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -204,18 +319,37 @@ export default {
       result.value = null
 
       try {
-        const endpoint = searchType.value === 'token'
-          ? `/verify/token/${encodeURIComponent(searchQuery.value)}`
-          : `/verify/parcel/${encodeURIComponent(searchQuery.value)}`
+        let endpoint
+        if (searchType.value === 'token') {
+          endpoint = `/verification/token/${encodeURIComponent(searchQuery.value)}`
+        } else if (searchType.value === 'parcel') {
+          endpoint = `/verification/parcel/${encodeURIComponent(searchQuery.value)}`
+        } else if (searchType.value === 'owner') {
+          endpoint = `/verification/owner-id/${encodeURIComponent(searchQuery.value)}`
+        }
 
         const response = await api.get(endpoint)
         result.value = response.data?.data || response.data
       } catch (err) {
         console.error('Verification error:', err)
-        error.value = err.response?.data?.message || 'Verification failed. The parcel or token was not found in the registry.'
+        if (searchType.value === 'owner') {
+          error.value = err.response?.data?.message || 'No land owner found with this National ID in the registry.'
+        } else {
+          error.value = err.response?.data?.message || 'Verification failed. The parcel or token was not found in the registry.'
+        }
       } finally {
         loading.value = false
       }
+    }
+
+    const getStatusBadge = (status) => {
+      const statusMap = {
+        'active': 'bg-success',
+        'pending_transfer': 'bg-warning',
+        'disputed': 'bg-danger',
+        'inactive': 'bg-secondary'
+      }
+      return statusMap[status?.toLowerCase()] || 'bg-secondary'
     }
 
     return {
@@ -225,7 +359,8 @@ export default {
       error,
       result,
       statusBadgeClass,
-      handleVerify
+      handleVerify,
+      getStatusBadge
     }
   }
 }

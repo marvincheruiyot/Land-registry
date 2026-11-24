@@ -68,3 +68,65 @@ exports.verifyByParcelNumber = async (req, res, next) => {
     next(error);
   }
 };
+
+// Verify Owner by National ID (Anyone can verify)
+exports.verifyByOwnerId = async (req, res, next) => {
+  try {
+    const { nationalId } = req.params;
+    
+    const User = require('../models/User');
+    
+    // Find the owner by National ID
+    const owner = await User.findOne({ 
+      nationalId: nationalId.trim(),
+      role: 'Land_Owner'
+    }).select('fullName nationalId');
+
+    if (!owner) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'No land owner found with this National ID in the registry.'
+      });
+    }
+
+    // Find all active parcels owned by this user
+    const parcels = await LandParcel.find({ 
+      currentOwner: owner._id,
+      status: { $in: ['active', 'pending_transfer'] }
+    }).select('parcelNumber titleDeedNumber location sizeInAcres landUse status');
+
+    // Calculate statistics
+    const totalParcels = parcels.length;
+    const totalAcres = parcels.reduce((sum, p) => sum + (p.sizeInAcres || 0), 0);
+    
+    // Get unique counties
+    const counties = [...new Set(parcels.map(p => p.location?.county).filter(Boolean))];
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        verified: true,
+        owner: {
+          fullName: owner.fullName,
+          nationalId: owner.nationalId
+        },
+        ownership: {
+          totalParcels,
+          totalAcres: parseFloat(totalAcres.toFixed(2)),
+          counties: counties
+        },
+        parcels: parcels.map(p => ({
+          parcelNumber: p.parcelNumber,
+          titleDeedNumber: p.titleDeedNumber,
+          county: p.location?.county,
+          subCounty: p.location?.subCounty,
+          size: p.sizeInAcres,
+          landUse: p.landUse,
+          status: p.status
+        }))
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -5,5 +5,6 @@ const verificationController = require('../controllers/verificationController');
 
 router.get('/token/:token', optionalAuth, verificationController.verifyByToken);
 router.get('/parcel/:parcelNumber', optionalAuth, verificationController.verifyByParcelNumber);
+router.get('/owner-id/:nationalId', optionalAuth, verificationController.verifyByOwnerId);
 
 module.exports = router;
